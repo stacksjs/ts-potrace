@@ -1,0 +1,65 @@
+{
+  "name": "ts-potrace",
+  "type": "module",
+  "version": "0.0.0",
+  "description": "TypeScript implementation of potrace - transforming bitmaps into vector graphics",
+  "author": "Chris Breuer <chris@stacksjs.org>",
+  "license": "MIT",
+  "homepage": "https://github.com/stacksjs/ts-potrace#readme",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/stacksjs/ts-potrace.git"
+  },
+  "bugs": {
+    "url": "https://github.com/stacksjs/ts-potrace/issues"
+  },
+  "keywords": ["typescript", "potrace", "svg", "vector", "bitmap", "tracing", "image", "processing"],
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    },
+    "./*": {
+      "import": "./dist/*"
+    }
+  },
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "files": ["README.md", "dist"],
+  "scripts": {
+    "build": "bun --bun build.ts",
+    "lint": "bunx --bun eslint .",
+    "lint:fix": "bunx --bun eslint . --fix",
+    "fresh": "bunx rimraf node_modules/ bun.lock && bun i",
+    "changelog": "bunx changelogen --output CHANGELOG.md",
+    "prepublishOnly": "bun --bun run build",
+    "release": "bun run changelog && bunx bumpp package.json --all",
+    "test": "bun test",
+    "dev:docs": "bun --bun vitepress dev docs",
+    "build:docs": "bun --bun vitepress build docs",
+    "preview:docs": "bun --bun vitepress preview docs",
+    "typecheck": "bun --bun tsc --noEmit"
+  },
+  "dependencies": {
+    "jimp": "^1.6.0"
+  },
+  "devDependencies": {
+    "@stacksjs/docs": "^0.70.23",
+    "@stacksjs/eslint-config": "^4.10.2-beta.3",
+    "@types/bun": "^1.2.10",
+    "@types/jimp": "^0.2.28",
+    "bumpp": "^10.1.0",
+    "bun-plugin-dtsx": "^0.21.9",
+    "bunfig": "^0.8.2",
+    "changelogen": "^0.6.1",
+    "lint-staged": "^15.5.1",
+    "simple-git-hooks": "^2.12.1",
+    "typescript": "^5.8.3"
+  },
+  "overrides": {
+    "unconfig": "0.3.10"
+  },
+  "lint-staged": {
+    "*.{js,ts}": "bunx --bun eslint . --fix"
+  }
+}
