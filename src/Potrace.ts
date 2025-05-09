@@ -68,19 +68,24 @@ class Potrace {
    * @private
    */
   _bmToPathlist(): void {
-    let self = this
+    const self = this
     let threshold = this._params.threshold ?? Potrace.THRESHOLD_AUTO
-    let blackOnWhite = this._params.blackOnWhite ?? true
+    const blackOnWhite = this._params.blackOnWhite ?? true
     let blackMap: Bitmap
     let currentPoint: Point | null = new Point(0, 0)
     let path: Path
+
+    // Set up safety limits to prevent infinite loops
+    const MAX_PATH_ITERATIONS = 100000 // Limit iterations for a single path
+    const MAX_PATHS = 10000 // Maximum number of paths to process
+    let pathCount = 0
 
     if (threshold === Potrace.THRESHOLD_AUTO) {
       threshold = this._luminanceData.histogram().autoThreshold() || 128
     }
 
     blackMap = this._luminanceData.copy((lum) => {
-      let pastTheThreshold = blackOnWhite
+      const pastTheThreshold = blackOnWhite
         ? lum > threshold
         : lum < threshold
 
@@ -96,9 +101,18 @@ class Potrace {
      */
     function findNext(point: Point): Point | null {
       let i = blackMap.pointToIndex(point.x, point.y)
+      let iterations = 0
+      const maxIterations = blackMap.size // Never search more than the total bitmap size
 
       while (i < blackMap.size && blackMap.data[i] !== 1) {
         i++
+        iterations++
+
+        // Safety check to prevent infinite loops
+        if (iterations > maxIterations) {
+          console.warn('findNext reached iteration limit, forcing exit')
+          return null
+        }
       }
 
       return i < blackMap.size ? blackMap.indexToPoint(i) : null
@@ -126,17 +140,26 @@ class Potrace {
       return 0
     }
 
-    function findPath(point: Point): Path {
-      let path = new Path()
+    function findPath(point: Point): Path | null {
+      const path = new Path()
       let x = point.x
       let y = point.y
       let dirx = 0
       let diry = 1
       let tmp
+      let iterations = 0
 
       path.sign = blackMap.getValueAt(point.x, point.y) ? '+' : '-'
 
-      while (1) {
+      while (true) {
+        iterations++
+
+        // Safety check to prevent infinite loops
+        if (iterations > MAX_PATH_ITERATIONS) {
+          console.warn(`findPath reached iteration limit (${MAX_PATH_ITERATIONS}), forcing exit`)
+          return null
+        }
+
         path.pt.push(new Point(x, y))
         if (x > path.maxX)
           path.maxX = x
@@ -151,6 +174,12 @@ class Potrace {
         x += dirx
         y += diry
         path.area -= x * diry
+
+        // Check for invalid coordinates to prevent accessing out-of-bounds memory
+        if (x < 0 || y < 0 || x >= blackMap.width || y >= blackMap.height) {
+          console.warn(`findPath reached invalid coordinates (${x},${y}), forcing exit`)
+          return null
+        }
 
         if (x === point.x && y === point.y)
           break
@@ -217,13 +246,22 @@ class Potrace {
     // Find first black pixel
     currentPoint = findNext(currentPoint)
 
+    // Main path finding loop with safety counter
     while (currentPoint) {
-      path = findPath(currentPoint)
+      pathCount++
 
-      // Ignore degenerate paths
-      if (path.area > this._params.turdSize) {
-        this._pathlist.push(path)
-        xorPath(path)
+      // Safety limit on number of paths
+      if (pathCount > MAX_PATHS) {
+        console.warn(`Reached maximum number of paths (${MAX_PATHS}), stopping processing`)
+        break
+      }
+
+      const foundPath = findPath(currentPoint)
+
+      // Ignore degenerate or null paths
+      if (foundPath && foundPath.area > (this._params.turdSize ?? 2)) {
+        this._pathlist.push(foundPath)
+        xorPath(foundPath)
       }
 
       currentPoint = findNext(currentPoint)
@@ -421,7 +459,7 @@ class Potrace {
 
     // Validate turnPolicy
     if (newParams.turnPolicy
-      && !SUPPORTED_TURNPOLICY_VALUES.includes(newParams.turnPolicy)) {
+      && !SUPPORTED_TURNPOLICY_VALUES.includes(newParams.turnPolicy as any)) {
       throw new Error(`Invalid turnPolicy: ${newParams.turnPolicy}`)
     }
 

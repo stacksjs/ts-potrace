@@ -68,7 +68,7 @@ For casual chit-chat with others using this package:
 
 ## Postcardware
 
-“Software that is free, but hopes for a postcard.” We love receiving postcards from around the world showing where Stacks is being used! We showcase them on our website too.
+"Software that is free, but hopes for a postcard." We love receiving postcards from around the world showing where Stacks is being used! We showcase them on our website too.
 
 Our address: Stacks.js, 12665 Village Ln #2306, Playa Vista, CA 90094, United States 🌎
 
@@ -93,3 +93,124 @@ Made with 💙
 
 <!-- [codecov-src]: https://img.shields.io/codecov/c/gh/stacksjs/ts-starter/main?style=flat-square
 [codecov-href]: https://codecov.io/gh/stacksjs/ts-starter -->
+
+# ts-potrace
+
+TypeScript implementation of potrace - transforming bitmaps into vector graphics.
+
+## Overview
+
+This is a TypeScript port of the JavaScript [potrace](https://github.com/kilobtye/potrace) library, which is itself a port of Peter Selinger's [potrace tool](http://potrace.sourceforge.net/).
+
+The library transforms bitmaps into vector graphics using the potrace algorithm.
+
+## Installation
+
+```bash
+npm install ts-potrace
+# or
+yarn add ts-potrace
+# or
+bun add ts-potrace
+```
+
+## Usage
+
+```typescript
+import { Potrace, trace } from 'ts-potrace'
+
+// Quick usage with callback
+trace('path/to/image.png', (err, svg) => {
+  if (err)
+    throw err
+  console.log(svg) // SVG content as string
+})
+
+// With options
+trace('path/to/image.png', {
+  turdSize: 5, // Suppress speckles of up to this size
+  optTolerance: 0.1, // Curve optimization tolerance
+  threshold: 128 // Threshold below which colors are converted to black
+}, (err, svg) => {
+  if (err)
+    throw err
+  console.log(svg)
+})
+
+// Using Potrace class for more control
+const potrace = new Potrace({
+  turdSize: 5,
+  optTolerance: 0.1,
+  threshold: 128
+})
+
+potrace.loadImage('path/to/image.png', (err) => {
+  if (err)
+    throw err
+  const svg = potrace.getSVG() // Get SVG string
+  console.log(svg)
+})
+```
+
+## Posterization
+
+The library also supports posterization (reducing image to limited set of colors):
+
+```typescript
+import { posterize, Posterizer } from 'ts-potrace'
+
+// Quick usage with callback
+posterize('path/to/image.png', (err, svg) => {
+  if (err)
+    throw err
+  console.log(svg)
+})
+
+// With options
+posterize('path/to/image.png', {
+  steps: 3, // Number of color steps (default: 4)
+  threshold: 128, // Color threshold (default: Potrace.THRESHOLD_AUTO)
+  blackOnWhite: true // Color mode (default: true)
+}, (err, svg) => {
+  if (err)
+    throw err
+  console.log(svg)
+})
+```
+
+## Options
+
+### Potrace Options
+
+| Option | Type | Default | Description |
+|--------|------|---------|-------------|
+| `turnPolicy` | string | `'minority'` | How to resolve ambiguities in path decomposition |
+| `turdSize` | number | `2` | Suppress speckles of up to this size |
+| `alphaMax` | number | `1` | Corner threshold parameter |
+| `optCurve` | boolean | `true` | Whether to optimize curve fitting |
+| `optTolerance` | number | `0.2` | Curve optimization tolerance |
+| `threshold` | number | `-1` (auto) | Threshold for color conversion |
+| `blackOnWhite` | boolean | `true` | Whether to assume dark image on light background |
+| `color` | string | `'auto'` | Fill color for SVG |
+| `background` | string | `'transparent'` | Background color for SVG |
+| `width` | number \| null | `null` | Width of output SVG |
+| `height` | number \| null | `null` | Height of output SVG |
+
+### Posterizer Options
+
+Includes all Potrace options, plus:
+
+| Option | Type | Default | Description |
+|--------|------|---------|-------------|
+| `steps` | number \| number[] | `4` | Number of color steps or array of thresholds |
+| `rangeDistribution` | string | `'equal'` | How color stops are distributed |
+| `fillStrategy` | string | `'dominant'` | How to calculate fill color |
+
+## License
+
+This project is licensed under the MIT License - see the LICENSE.md file for details.
+
+## Acknowledgments
+
+* Original potrace algorithm by Peter Selinger
+* JavaScript port by Iwao AVE!

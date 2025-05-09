@@ -1,19 +1,19 @@
 {
-  "name": "bun-ts-starter",
+  "name": "ts-potrace",
   "type": "module",
-  "version": "0.4.0",
-  "description": "A simple TypeScript starter kit using Bun.",
+  "version": "0.0.0",
+  "description": "TypeScript implementation of potrace - transforming bitmaps into vector graphics",
   "author": "Chris Breuer <chris@stacksjs.org>",
   "license": "MIT",
-  "homepage": "https://github.com/stacksjs/ts-starter#readme",
+  "homepage": "https://github.com/stacksjs/ts-potrace#readme",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/stacksjs/ts-starter.git"
+    "url": "git+https://github.com/stacksjs/ts-potrace.git"
   },
   "bugs": {
-    "url": "https://github.com/stacksjs/ts-starter/issues"
+    "url": "https://github.com/stacksjs/ts-potrace/issues"
   },
-  "keywords": ["typescript", "starter", "kit", "bun", "package"],
+  "keywords": ["typescript", "potrace", "svg", "vector", "bitmap", "tracing", "image", "processing"],
   "exports": {
     ".": {
       "types": "./dist/index.d.ts",
@@ -25,6 +25,9 @@
   },
   "module": "./dist/index.js",
   "types": "./dist/index.d.ts",
+  "bin": {
+    "ts-potrace": "./dist/bin/cli.js"
+  },
   "files": ["README.md", "dist"],
   "scripts": {
     "build": "bun --bun build.ts",
@@ -35,19 +38,21 @@
     "prepublishOnly": "bun --bun run build",
     "release": "bun run changelog && bunx bumpp package.json --all",
     "test": "bun test",
+    "test:safe": "bun test test/final-potrace.test.ts test/potrace-real.test.ts test/trace.test.ts",
+    "test:timeout": "bun test --timeout 5000",
     "dev:docs": "bun --bun vitepress dev docs",
     "build:docs": "bun --bun vitepress build docs",
     "preview:docs": "bun --bun vitepress preview docs",
     "typecheck": "bun --bun tsc --noEmit"
   },
   "dependencies": {
-    "@types/jimp": "^0.2.28",
     "jimp": "^1.6.0"
   },
   "devDependencies": {
     "@stacksjs/docs": "^0.70.23",
     "@stacksjs/eslint-config": "^4.10.2-beta.3",
     "@types/bun": "^1.2.10",
+    "@types/jimp": "^0.2.28",
     "bumpp": "^10.1.0",
     "bun-plugin-dtsx": "^0.21.9",
     "bunfig": "^0.8.2",

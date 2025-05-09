@@ -1,28 +1,31 @@
-import type { posterizeCallback, traceCallback } from '../src/index'
+import type { posterizeCallback, traceCallback } from '../src'
 import type Posterizer from '../src/Posterizer'
-// Import necessary types
-import type Potrace from '../src/Potrace'
 import type { Histogram } from '../src/types'
 
-import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, mock, spyOn, test } from 'bun:test'
+import { afterAll, beforeAll, describe, expect, it, spyOn, test } from 'bun:test'
+
 import { readFileSync } from 'node:fs'
 import { join } from 'node:path'
-
-// Import Jimp correctly for version 1.x
+// Import Jimp correctly
 import { Jimp } from 'jimp'
-import * as lib from '../src/index'
+// Import library modules
+import * as lib from '../src'
+import Potrace from '../src/Potrace'
 
-// Define paths to test images
-const PATH_TO_YAO = './test/sources/yao.jpg'
-const PATH_TO_LENNA = './test/sources/Lenna.png'
-const PATH_TO_BLACK_AND_WHITE_IMAGE = './test/sources/clouds.jpg'
+// Define paths to test images - updated to use absolute paths
+const PATH_TO_YAO = join(__dirname, 'sources/yao.jpg')
+const PATH_TO_LENNA = join(__dirname, 'sources/Lenna.png')
+const PATH_TO_BLACK_AND_WHITE_IMAGE = join(__dirname, 'sources/clouds.jpg')
+
+// Define paths to reference SVG files
+const REFS_PATH = join(__dirname, 'reference-copies')
 
 // Create black and white test images
 let blackImage: any
 let whiteImage: any
 
 // Helper function for assertions
-function assert(condition: boolean, message?: string): void {
+function assert(condition: boolean, _message?: string): void {
   expect(condition).toBe(true)
 }
 
@@ -41,7 +44,7 @@ before(async () => {
   try {
     // Create blank images programmatically instead of using the constructor
     blackImage = await Jimp.read(PATH_TO_YAO) // Use an existing image
-    blackImage.scan(0, 0, blackImage.bitmap.width, blackImage.bitmap.height, (x, y, idx) => {
+    blackImage.scan(0, 0, blackImage.bitmap.width, blackImage.bitmap.height, (x: number, y: number, idx: number) => {
       // Set all pixels to black
       blackImage.bitmap.data[idx] = 0
       blackImage.bitmap.data[idx + 1] = 0
@@ -50,7 +53,7 @@ before(async () => {
     })
 
     whiteImage = await Jimp.read(PATH_TO_YAO) // Use an existing image
-    whiteImage.scan(0, 0, whiteImage.bitmap.width, whiteImage.bitmap.height, (x, y, idx) => {
+    whiteImage.scan(0, 0, whiteImage.bitmap.width, whiteImage.bitmap.height, (x: number, y: number, idx: number) => {
       // Set all pixels to white
       whiteImage.bitmap.data[idx] = 255
       whiteImage.bitmap.data[idx + 1] = 255
@@ -167,6 +170,130 @@ describe('Potrace', () => {
       done()
     })
   })
+
+  describe('#_processPath', () => {
+    let instance: InstanceType<typeof Potrace>
+    let processingSpy: any
+
+    beforeAll(() => {
+      instance = new Potrace()
+      processingSpy = spyOn(Potrace.prototype, '_processPath')
+    })
+
+    it('should not execute until path is requested for the first time', (done) => {
+      instance.loadImage(PATH_TO_YAO, function (this: InstanceType<typeof Potrace>) {
+        expect(processingSpy).toHaveBeenCalledTimes(0)
+        this.getSVG()
+        expect(processingSpy).toHaveBeenCalledTimes(1)
+        done()
+      })
+    })
+
+    it('should not execute on repetitive SVG/Symbol export', (done) => {
+      instance.loadImage(PATH_TO_YAO, function (this: InstanceType<typeof Potrace>) {
+        const initialCallCount = processingSpy.mock.calls.length
+
+        this.getSVG()
+        this.getSVG()
+        this.getPathTag()
+        this.getPathTag('red')
+        this.getSymbol('symbol-id')
+
+        expect(processingSpy).toHaveBeenCalledTimes(initialCallCount)
+        done()
+      })
+    })
+
+    it('should not execute after change of foreground/background colors', (done) => {
+      instance.loadImage(PATH_TO_YAO, function (this: InstanceType<typeof Potrace>) {
+        const initialCallCount = processingSpy.mock.calls.length
+
+        this.setParameters({ color: 'red' })
+        this.getSVG()
+
+        this.setParameters({ background: 'crimson' })
+        this.getSVG()
+
+        expect(processingSpy).toHaveBeenCalledTimes(initialCallCount)
+        done()
+      })
+    })
+  })
+
+  describe('behaves predictably in edge cases', () => {
+    let instance: InstanceType<typeof Potrace>
+
+    let bwBlackThreshold0: string
+    let bwBlackThreshold255: string
+    let bwWhiteThreshold0: string
+    let bwWhiteThreshold255: string
+    let wbWhiteThreshold0: string
+    let wbWhiteThreshold255: string
+    let wbBlackThreshold0: string
+    let wbBlackThreshold255: string
+
+    beforeAll(() => {
+      instance = new Potrace()
+
+      bwBlackThreshold0 = readFileSync(join(REFS_PATH, 'potrace-bw-black-threshold-0.svg'), { encoding: 'utf8' })
+      bwBlackThreshold255 = readFileSync(join(REFS_PATH, 'potrace-bw-black-threshold-255.svg'), { encoding: 'utf8' })
+      bwWhiteThreshold0 = readFileSync(join(REFS_PATH, 'potrace-bw-white-threshold-0.svg'), { encoding: 'utf8' })
+      bwWhiteThreshold255 = readFileSync(join(REFS_PATH, 'potrace-bw-white-threshold-255.svg'), { encoding: 'utf8' })
+
+      wbWhiteThreshold0 = readFileSync(join(REFS_PATH, 'potrace-wb-white-threshold-0.svg'), { encoding: 'utf8' })
+      wbWhiteThreshold255 = readFileSync(join(REFS_PATH, 'potrace-wb-white-threshold-255.svg'), { encoding: 'utf8' })
+      wbBlackThreshold0 = readFileSync(join(REFS_PATH, 'potrace-wb-black-threshold-0.svg'), { encoding: 'utf8' })
+      wbBlackThreshold255 = readFileSync(join(REFS_PATH, 'potrace-wb-black-threshold-255.svg'), { encoding: 'utf8' })
+    })
+
+    it('compares colors against threshold in the same way as original tool', (done) => {
+      instance.loadImage(blackImage, (err: Error | null) => {
+        if (err) { return done(err) }
+
+        instance.setParameters({ blackOnWhite: true, threshold: 0 })
+        expect(instance.getSVG()).toBe(bwBlackThreshold0)
+
+        instance.setParameters({ blackOnWhite: true, threshold: 255 })
+        expect(instance.getSVG()).toBe(bwBlackThreshold255)
+
+        instance.loadImage(whiteImage, (innerErr: Error | null) => {
+          if (innerErr) { return done(innerErr) }
+
+          instance.setParameters({ blackOnWhite: true, threshold: 0 })
+          expect(instance.getSVG()).toBe(bwWhiteThreshold0)
+
+          instance.setParameters({ blackOnWhite: true, threshold: 255 })
+          expect(instance.getSVG()).toBe(bwWhiteThreshold255)
+
+          done()
+        })
+      })
+    })
+
+    it('acts in the same way when colors are inverted', (done) => {
+      instance.loadImage(whiteImage, (err: Error | null) => {
+        if (err) { return done(err) }
+
+        instance.setParameters({ blackOnWhite: false, threshold: 255 })
+        expect(instance.getSVG()).toBe(wbWhiteThreshold255)
+
+        instance.setParameters({ blackOnWhite: false, threshold: 0 })
+        expect(instance.getSVG()).toBe(wbWhiteThreshold0)
+
+        instance.loadImage(blackImage, (innerErr: Error | null) => {
+          if (innerErr) { return done(innerErr) }
+
+          instance.setParameters({ blackOnWhite: false, threshold: 255 })
+          expect(instance.getSVG()).toBe(wbBlackThreshold255)
+
+          instance.setParameters({ blackOnWhite: false, threshold: 0 })
+          expect(instance.getSVG()).toBe(wbBlackThreshold0)
+
+          done()
+        })
+      })
+    })
+  })
 })
 
 describe('Histogram class (private, responsible for auto thresholding)', () => {
@@ -179,7 +306,7 @@ describe('Histogram class (private, responsible for auto thresholding)', () => {
     try {
       // Create test images for histogram testing
       blackImage = await Jimp.read(PATH_TO_YAO) // Use an existing image
-      blackImage.scan(0, 0, blackImage.bitmap.width, blackImage.bitmap.height, (x, y, idx) => {
+      blackImage.scan(0, 0, blackImage.bitmap.width, blackImage.bitmap.height, (x: number, y: number, idx: number) => {
         // Set all pixels to black
         blackImage.bitmap.data[idx] = 0
         blackImage.bitmap.data[idx + 1] = 0
@@ -188,7 +315,7 @@ describe('Histogram class (private, responsible for auto thresholding)', () => {
       })
 
       whiteImage = await Jimp.read(PATH_TO_YAO) // Use an existing image
-      whiteImage.scan(0, 0, whiteImage.bitmap.width, whiteImage.bitmap.height, (x, y, idx) => {
+      whiteImage.scan(0, 0, whiteImage.bitmap.width, whiteImage.bitmap.height, (x: number, y: number, idx: number) => {
         // Set all pixels to white
         whiteImage.bitmap.data[idx] = 255
         whiteImage.bitmap.data[idx + 1] = 255
@@ -362,7 +489,7 @@ describe('Histogram class (private, responsible for auto thresholding)', () => {
 })
 
 describe('Posterizer class', () => {
-  let jimpInstance: Jimp | null = null
+  let jimpInstance: any = null
   const sharedPosterizerInstance = new lib.Posterizer()
 
   beforeAll(async () => {
@@ -516,15 +643,15 @@ describe('Posterizer class', () => {
       let expected: string
 
       instanceYao.setParameters({ threshold: 128 })
-      expected = readFileSync('./test/reference-copies/posterized-yao-black-threshold-128.svg', { encoding: 'utf8' })
+      expected = readFileSync(join(REFS_PATH, 'posterized-yao-black-threshold-128.svg'), { encoding: 'utf8' })
       expect(instanceYao.getSVG()).toBe(expected)
 
       instanceYao.setParameters({ threshold: 65 })
-      expected = readFileSync('./test/reference-copies/posterized-yao-black-threshold-65.svg', { encoding: 'utf8' })
+      expected = readFileSync(join(REFS_PATH, 'posterized-yao-black-threshold-65.svg'), { encoding: 'utf8' })
       expect(instanceYao.getSVG()).toBe(expected)
 
       instanceYao.setParameters({ threshold: 170 })
-      expected = readFileSync('./test/reference-copies/posterized-yao-black-threshold-170.svg', { encoding: 'utf8' })
+      expected = readFileSync(join(REFS_PATH, 'posterized-yao-black-threshold-170.svg'), { encoding: 'utf8' })
       expect(instanceYao.getSVG()).toBe(expected)
     })
 
@@ -541,7 +668,7 @@ describe('Posterizer class', () => {
         if (err)
           return done(err)
 
-        const expected = readFileSync('./test/reference-copies/posterized-clouds-white-40.svg', { encoding: 'utf8' })
+        const expected = readFileSync(join(REFS_PATH, 'posterized-clouds-white-40.svg'), { encoding: 'utf8' })
         const actual = instance.getSVG()
 
         expect(actual).toBe(expected)
@@ -639,7 +766,7 @@ describe('Posterizer class', () => {
 })
 
 describe('Shorthand methods', () => {
-  let jimpInstance: Jimp | null = null
+  let jimpInstance: any = null
 
   beforeAll(async () => {
     try {
@@ -651,31 +778,31 @@ describe('Shorthand methods', () => {
   })
 
   describe('#trace', () => {
-    let instance: Potrace | null = null
+    let instance: any = null
 
     it('works with two arguments', (done) => {
-      lib.trace(jimpInstance!, (err: Error | null, svgContents: string, inst?: Potrace) => {
+      lib.trace(jimpInstance!, (err, svg, inst) => {
         if (err) {
           throw err
         }
 
-        const expected = readFileSync('./test/reference-copies/output.svg', { encoding: 'utf8' })
+        const expected = readFileSync(join(REFS_PATH, 'output.svg'), { encoding: 'utf8' })
 
         instance = inst
-        expect(svgContents).toBe(expected)
+        expect(svg).toBe(expected)
         done()
       })
     })
 
     it('works with three arguments', (done) => {
-      lib.trace(jimpInstance!, { threshold: 170 }, (err: Error | null, svgContents?: string, instance?: Potrace) => {
+      lib.trace(jimpInstance!, { threshold: 170 }, (err, svg) => {
         if (err) {
           throw err
         }
 
-        const expected = readFileSync('./test/reference-copies/potrace-bw-threshold-170.svg', { encoding: 'utf8' })
+        const expected = readFileSync(join(REFS_PATH, 'potrace-bw-threshold-170.svg'), { encoding: 'utf8' })
 
-        expect(svgContents).toBe(expected)
+        expect(svg).toBe(expected)
         done()
       })
     })
@@ -686,31 +813,31 @@ describe('Shorthand methods', () => {
   })
 
   describe('#posterize', () => {
-    let instance: Posterizer | null = null
+    let instance: any = null
 
     it('works with two arguments', (done) => {
-      lib.posterize(jimpInstance!, (err: Error | null, svgContents: string, inst?: Posterizer) => {
+      lib.posterize(jimpInstance!, (err, svg, inst) => {
         if (err) {
           throw err
         }
 
-        const expected = readFileSync('./test/reference-copies/output-posterized.svg', { encoding: 'utf8' })
+        const expected = readFileSync(join(REFS_PATH, 'output-posterized.svg'), { encoding: 'utf8' })
 
         instance = inst
-        expect(svgContents).toBe(expected)
+        expect(svg).toBe(expected)
         done()
       })
     })
 
     it('works with three arguments', (done) => {
-      lib.posterize(jimpInstance!, { threshold: 170 }, (err: Error | null, svgContents?: string, instance?: Posterizer) => {
+      lib.posterize(jimpInstance!, { threshold: 170 }, (err, svg) => {
         if (err) {
           throw err
         }
 
-        const expected = readFileSync('./test/reference-copies/posterized-bw-threshold-170.svg', { encoding: 'utf8' })
+        const expected = readFileSync(join(REFS_PATH, 'posterized-bw-threshold-170.svg'), { encoding: 'utf8' })
 
-        expect(svgContents).toBe(expected)
+        expect(svg).toBe(expected)
         done()
       })
     })
