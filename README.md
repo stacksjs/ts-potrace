@@ -10,8 +10,6 @@
 
 A TypeScript port of [Potrace][potrace] — a tool for tracing bitmaps.
 
-## Example & Demo
-
 | **Original image**        | **Potrace output**           | **Posterized output**                   |
 |---------------------------|------------------------------|-----------------------------------------|
 | ![](test/sources/yao.jpg) | ![](test/example-output.svg) | ![](test/example-output-posterized.svg) |
@@ -204,7 +202,7 @@ Please see [CONTRIBUTING](.github/CONTRIBUTING.md) for details.
 
 For help, discussion about best practices, or any other conversation that would benefit from being searchable:
 
-[Discussions on GitHub](https://github.com/stacksjs/ts-starter/discussions)
+[Discussions on GitHub](https://github.com/stacksjs/ts-potrace/discussions)
 
 For casual chit-chat with others using this package:
 
@@ -232,8 +230,8 @@ Made with 💙
 <!-- Badges -->
 [npm-version-src]: https://img.shields.io/npm/v/ts-potrace?style=flat-square
 [npm-version-href]: https://npmjs.com/package/ts-potrace
-[github-actions-src]: https://img.shields.io/github/actions/workflow/status/stacksjs/ts-starter/ci.yml?style=flat-square&branch=main
-[github-actions-href]: https://github.com/stacksjs/ts-starter/actions?query=workflow%3Aci
+[github-actions-src]: https://img.shields.io/github/actions/workflow/status/stacksjs/ts-potrace/ci.yml?style=flat-square&branch=main
+[github-actions-href]: https://github.com/stacksjs/ts-potrace/actions?query=workflow%3Aci
 [potrace-algorithm]: http://potrace.sourceforge.net/potrace.pdf
 [multilevel-thresholding]: http://www.iis.sinica.edu.tw/page/jise/2001/200109_01.pdf
 [potrace-by-kilobtye]: https://github.com/kilobtye/potrace
@@ -241,5 +239,5 @@ Made with 💙
 [potrace]: http://potrace.sourceforge.net/
 [jimp]: https://github.com/oliver-moran/jimp
 
-<!-- [codecov-src]: https://img.shields.io/codecov/c/gh/stacksjs/ts-starter/main?style=flat-square
-[codecov-href]: https://codecov.io/gh/stacksjs/ts-starter -->
+<!-- [codecov-src]: https://img.shields.io/codecov/c/gh/stacksjs/ts-potrace/main?style=flat-square
+[codecov-href]: https://codecov.io/gh/stacksjs/ts-p -->
