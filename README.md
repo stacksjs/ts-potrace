@@ -8,7 +8,18 @@
 
 # ts-potrace
 
-A TypeScript port of [Potrace][potrace] — a tool for tracing bitmaps.
+A TypeScript implementation of [Potrace][potrace] — a tool for transforming bitmap images into scalable vector graphics.
+
+## Features
+
+- **Bitmap Tracing**: Convert raster images to clean SVG vector paths
+- **Posterization**: Create multi-level color traces for more detailed output
+- **High-Quality Output**: Generate smooth, optimized vector graphics
+- **Extensive Customization**: Fine-tune the tracing process with many options
+- **TypeScript Support**: Fully typed API for better development experience
+- **Platform Independent**: Works in Bun & Node.js environments
+
+## Examples
 
 | **Original image**        | **Potrace output**           | **Posterized output**                   |
 |---------------------------|------------------------------|-----------------------------------------|
@@ -16,167 +27,189 @@ A TypeScript port of [Potrace][potrace] — a tool for tracing bitmaps.
 
 _(Example image inherited from [online demo of the browser version][potrace-js-demo])_
 
-## Usage
-
-Install
+## Installation
 
 ```sh
+# Using npm
 npm install ts-potrace
+
+# Using Bun
 bun install ts-potrace
+
+# Using pnpm
+pnpm add ts-potrace
+
+# Using Yarn
+yarn add ts-potrace
 ```
 
-Basic usage
+## Quick Start
+
+### Basic Tracing
 
 ```ts
-import { Potrace } from 'ts-potrace'
+import fs from 'node:fs'
+import { trace } from 'ts-potrace'
 
-const potrace = new Potrace()
-
-potrace.trace('./path/to/image.png', (err, svg) => {
+// Simple tracing with default options
+trace('input.png', (err, svg) => {
   if (err)
     throw err
-  fs.writeFileSync('./output.svg', svg)
+  fs.writeFileSync('output.svg', svg)
 })
-```
 
-You can also provide a configuration object as a second argument.
-
-```ts
-const params = {
-  background: '#49ffd2',
+// With custom options
+trace('input.png', {
+  background: '#f8f9fa',
   color: 'blue',
   threshold: 120
-}
-
-potrace.trace('./path/to/image.png', params, (err, svg) => {
-  /* ... */
+}, (err, svg) => {
+  if (err)
+    throw err
+  fs.writeFileSync('output-custom.svg', svg)
 })
 ```
 
-If you want to run Potrace algorithm multiple times on the same image with different threshold setting and merge results together in a single file - `posterize` method does exactly that.
-
-```js
-potrace.posterize('./path/to/image.png', { threshold: 180, steps: 4 }, (err, svg) => {
-  /* ... */
-})
-
-// or if you know exactly where you want to break it on different levels
-
-potrace.posterize('./path/to/image.png', { steps: [40, 85, 135, 180] }, (err, svg) => {
-  /* ... */
-})
-```
-
-### Advanced usage and configuration
-
-Both `trace` and `posterize` methods return instances of `Potrace` and `Posterizer` classes respectively to a callback function as third argument.
-
-You can also instantiate these classes directly:
+### Posterization
 
 ```ts
-import { Posterize, Potrace } from 'ts-potrace'
+import fs from 'node:fs'
+import { posterize } from 'ts-potrace'
 
-// Tracing
-
-const potrace = new Potrace()
-
-// You can also pass configuration object to the constructor
-trace.setParameters({
-  threshold: 128,
-  color: '#880000'
-})
-
-trace.loadImage('path/to/image.png', (err) => {
+// Create multi-level color trace
+posterize('input.png', {
+  steps: 5,
+  fillStrategy: 'dominant'
+}, (err, svg) => {
   if (err)
     throw err
-
-  trace.getSVG() // returns SVG document contents
-  trace.getPathTag() // will return just <path> tag
-  trace.getSymbol('traced-image') // will return <symbol> tag with given ID
+  fs.writeFileSync('posterized.svg', svg)
 })
 
-// Posterization
-
-const posterizer = new Posterize()
-
-posterizer.loadImage('path/to/image.png', (err) => {
+// With custom threshold levels
+posterize('input.png', {
+  steps: [40, 85, 135, 180]
+}, (err, svg) => {
   if (err)
     throw err
-
-  posterizer.setParameter({
-    color: '#ccc',
-    background: '#222',
-    steps: 3,
-    threshold: 200,
-    fillStrategy: Posterize.FILL_MEAN
-  })
-
-  posterizer.getSVG()
-  // or
-  posterizer.getSymbol('posterized-image')
+  fs.writeFileSync('custom-levels.svg', svg)
 })
 ```
 
-Callback function provided to `loadImage` methods will be executed in context of the `Potrace`/`Posterizer` instance, so if it doesn't go against your code style - you can just do
+## Advanced Usage
 
-```js
-new potrace.Potrace()
-  .loadImage('path/to/image.bmp', function () {
-    if (err)
-      throw err
-    this.getSymbol('foo')
-  })
+### Using the Potrace Class Directly
+
+```ts
+import fs from 'node:fs'
+import { Potrace } from 'ts-potrace'
+
+const potrace = new Potrace({
+  turdSize: 5,
+  alphaMax: 1,
+  optCurve: true,
+  optTolerance: 0.2
+})
+
+potrace.loadImage('input.png', (err) => {
+  if (err)
+    throw err
+
+  // Get full SVG document
+  const svg = potrace.getSVG()
+  fs.writeFileSync('output.svg', svg)
+
+  // Get just the path element
+  const path = potrace.getPathTag()
+  console.log(path)
+
+  // Get as SVG symbol with ID
+  const symbol = potrace.getSymbol('traced-image')
+  console.log(symbol)
+})
 ```
 
-[Jimp module][jimp] is used on the back end, so first argument accepted by `loadImage` method could be anything Jimp can read: a `Buffer`, local path or a url string. Supported formats are: PNG, JPEG or BMP. It also could be a Jimp instance (provided bitmap is not modified)
+### Using the Posterizer Class
 
-### Parameters
+```ts
+import fs from 'node:fs'
+import { Posterizer } from 'ts-potrace'
 
-`Potrace` class expects following parameters:
+const posterizer = new Posterizer({
+  steps: 4,
+  fillStrategy: 'dominant',
+  rangeDistribution: 'auto',
+  background: '#ffffff'
+})
 
-- **turnPolicy** - how to resolve ambiguities in path decomposition. Possible values are exported as constants: `TURNPOLICY_BLACK`, `TURNPOLICY_WHITE`, `TURNPOLICY_LEFT`, `TURNPOLICY_RIGHT`, `TURNPOLICY_MINORITY`, `TURNPOLICY_MAJORITY`. Refer to [this document][potrace-algorithm] for more information (page 4)
-  (default: `TURNPOLICY_MINORITY`)
-- **turdSize** - suppress speckles of up to this size
-  (default: 2)
-- **alphaMax** - corner threshold parameter
-  (default: 1)
-- **optCurve** - curve optimization
-  (default: true)
-- **optTolerance** - curve optimization tolerance
-  (default: 0.2)
-- **threshold** - threshold below which color is considered black.
-  Should be a number in range 0..255 or `THRESHOLD_AUTO` in which case threshold will be selected automatically using [Algorithm For Multilevel Thresholding][multilevel-thresholding]
-  (default: `THRESHOLD_AUTO`)
-- **blackOnWhite** - specifies colors by which side from threshold should be turned into vector shape
-  (default: `true`)
-- **color** - Fill color. Will be ignored when exporting as \<symbol\>. (default: `COLOR_AUTO`, which means black or white, depending on `blackOnWhite` property)
-- **background** - Background color. Will be ignored when exporting as \<symbol\>. By default is not present (`COLOR_TRANSPARENT`)
+posterizer.loadImage('input.png', (err) => {
+  if (err)
+    throw err
 
----------------
+  posterizer.setParameters({
+    color: '#333',
+    background: '#f0f0f0',
+  })
 
-`Posterizer` class has same methods as `Potrace`, in exception of `.getPathTag()`.
-Configuration object is extended with following properties:
+  // Get the SVG with multiple color levels
+  const svg = posterizer.getSVG()
+  fs.writeFileSync('posterized.svg', svg)
 
-- **fillStrategy** - determines how fill color for each layer should be selected. Possible values are exported as constants:
-    - `FILL_DOMINANT` - most frequent color in range (used by default),
-    - `FILL_MEAN` - arithmetic mean (average),
-    - `FILL_MEDIAN` - median color,
-    - `FILL_SPREAD` - ignores color information of the image and just spreads colors equally in range 0..\<threshold\> (or \<threshold\>..255 if `blackOnWhite` is set to `false`),
-- **rangeDistribution** - how color stops for each layer should be selected. Ignored if `steps` is an array. Possible values are:
-    - `RANGES_AUTO` - Performs automatic thresholding (using [Algorithm For Multilevel Thresholding][multilevel-thresholding]). Preferable method for already posterized sources, but takes long time to calculate 5 or more thresholds (exponential time complexity)
-      *(used by default)*
-    - `RANGES_EQUAL` - Ignores color information of the image and breaks available color space into equal chunks
-- **steps** - Specifies desired number of layers in resulting image. If a number provided - thresholds for each layer will be automatically calculated according to `rangeDistribution` parameter. If an array provided it expected to be an array with precomputed thresholds for each layer (in range 0..255)
-  (default: `STEPS_AUTO` which will result in `3` or `4`, depending on `threshold` value)
-- **threshold** - Breaks image into foreground and background (and only foreground being broken into desired number of layers). Basically when provided it becomes a threshold for last (least opaque) layer and then `steps - 1` intermediate thresholds calculated. If **steps** is an array of thresholds and every value from the array is lower (or larger if **blackOnWhite** parameter set to `false`) than threshold - threshold will be added to the array, otherwise just ignored.
-  (default: `Potrace.THRESHOLD_AUTO`)
-- *all other parameters that Potrace class accepts*
+  // Get as SVG symbol with ID
+  const symbol = posterizer.getSymbol('posterized-image')
+  console.log(symbol)
+})
+```
 
-**Notes:**
+## Configuration Parameters
 
-- When number of `steps` is greater than 10 - an extra layer could be added to ensure presence of darkest/brightest colors if needed to ensure presence of probably-important-at-this-point details like shadows or line art.
-- With big number of layers produced image will be looking brighter overall than original due to math error at the rendering phase because of how layers are composited.
-- With default configuration `steps`, `threshold` and `rangeDistribution` settings all set to auto, resulting in a 4 thresholds/color stops being calculated with Multilevel Thresholding algorithm mentioned above. Calculation of 4 thresholds takes 3-5 seconds on average laptop. You may want to explicitly limit number of `steps` to 3 to moderately improve processing speed.
+### Potrace Parameters
+
+- **turnPolicy** - How to resolve ambiguities in path decomposition
+  - Options: `'black'`, `'white'`, `'left'`, `'right'`, `'minority'`, `'majority'`
+  - Default: `'minority'`
+- **turdSize** - Suppress speckles up to this size
+  - Default: `2`
+- **alphaMax** - Corner threshold parameter
+  - Default: `1`
+- **optCurve** - Enable curve optimization
+  - Default: `true`
+- **optTolerance** - Curve optimization tolerance
+  - Default: `0.2`
+- **threshold** - Threshold for black/white classification
+  - Range: `0-255` or `Potrace.THRESHOLD_AUTO` for automatic threshold detection
+  - Default: `Potrace.THRESHOLD_AUTO`
+- **blackOnWhite** - Trace dark areas on light background or vice versa
+  - Default: `true`
+- **color** - Fill color for the traced paths
+  - Default: `'auto'`
+- **background** - Background color
+  - Default: `'transparent'`
+- **width** / **height** - Output dimensions
+  - Default: Original dimensions
+
+### Posterizer Parameters
+
+Includes all Potrace parameters plus:
+
+- **steps** - Number of color levels or specific thresholds
+  - Can be a number (2-255) or an array of threshold values
+  - Default: Automatic (3 or 4 levels)
+- **fillStrategy** - How colors are selected for each level
+  - Options: `'dominant'`, `'mean'`, `'median'`, `'spread'`
+  - Default: `'dominant'`
+- **rangeDistribution** - How color ranges are distributed
+  - Options: `'auto'`, `'equal'`
+  - Default: `'auto'`
+
+## Performance Notes
+
+- With default configuration, posterization with 4+ thresholds can take 3-5 seconds on an average laptop due to the automatic thresholding algorithm.
+- For better performance, consider:
+  - Explicitly limiting `steps` to 3
+  - Pre-resizing large images
+  - Increasing `turdSize` to remove small details
+  - Using `threshold` with a fixed value instead of automatic detection
 
 ## Credits
 
@@ -190,9 +223,13 @@ Configuration object is extended with following properties:
 bun test
 ```
 
+## Documentation
+
+For more detailed documentation, examples, and API references, check out our [documentation website](https://stacksjs.github.io/ts-potrace/).
+
 ## Changelog
 
-Please see our [releases](https://github.com/stackjs/ts-potrace/releases) page for more information on what has changed recently.
+Please see our [releases](https://github.com/stacksjs/ts-potrace/releases) page for more information on what has changed recently.
 
 ## Contributing
 
