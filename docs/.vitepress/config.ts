@@ -1,8 +1,6 @@
 import type { HeadConfig } from 'vitepress'
-import { transformerTwoslash } from '@shikijs/vitepress-twoslash'
 import { withPwa } from '@vite-pwa/vitepress'
 import { defineConfig } from 'vitepress'
-
 import viteConfig from './vite.config'
 
 // https://vitepress.dev/reference/site-config
@@ -33,6 +31,7 @@ const nav = [
       { text: 'Partners', link: '/partners' },
       { text: 'Postcardware', link: '/postcardware' },
       { text: 'Stargazers', link: '/stargazers' },
+      { text: 'Showcase', link: '/Showcase' },
       { text: 'License', link: '/license' },
       {
         items: [
@@ -60,7 +59,24 @@ const sidebar = [
       { text: 'Config', link: '/config' },
     ],
   },
-  { text: 'Showcase', link: '/Showcase' },
+  {
+    text: 'Features',
+    items: [
+      { text: 'Bitmap Tracing', link: '/features/bitmap-tracing' },
+      { text: 'Posterization', link: '/features/posterization' },
+      { text: 'SVG Generation', link: '/features/svg-generation' },
+      { text: 'Color Handling', link: '/features/color-handling' },
+    ],
+  },
+  {
+    text: 'Advanced',
+    items: [
+      { text: 'Custom Parameters', link: '/advanced/custom-parameters' },
+      { text: 'Performance Optimization', link: '/advanced/performance-optimization' },
+      { text: 'Integration Examples', link: '/advanced/integration-examples' },
+    ],
+  },
+  { text: 'API Reference', link: '/api-reference' },
 ]
 const description = 'A TypeScript Starter Kit. For a better Development Experience.'
 const title = 'ts-starter | A TypeScript Starter Kit. For a better Development Experience.'
@@ -146,10 +162,6 @@ export default withPwa(
         light: 'github-light',
         dark: 'github-dark',
       },
-
-      codeTransformers: [
-        transformerTwoslash(),
-      ],
     },
 
     vite: viteConfig,

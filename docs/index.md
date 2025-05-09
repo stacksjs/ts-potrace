@@ -3,9 +3,9 @@
 layout: home
 
 hero:
-  name: "ts-starter"
-  text: "For a better local environment."
-  tagline: "Modern and smart reverse proxy."
+  name: "ts-potrace"
+  text: "Bitmap to vector graphics transformation."
+  tagline: "A TypeScript implementation of potrace for converting bitmap images to SVG."
   image: /images/logo-white.png
   actions:
     - theme: brand
@@ -13,21 +13,21 @@ hero:
       link: /intro
     - theme: alt
       text: View on GitHub
-      link: https://github.com/stacksjs/rpx
+      link: https://github.com/stacksjs/ts-potrace
 
 features:
-  - title: "Minimal Starter Kit"
-    icon: "🔀"
-    details: "Bootstrap your next TypeScript project."
-  - title: "Documentation"
-    icon: "📚"
-    details: "Easily document your idea/package/library."
-  - title: "CLI"
-    icon: "🛠"
-    details: "Build your own CLI."
-  - title: "Binary"
-    icon: "🚀"
-    details: "Automatically builds a binary for your project out of your CLI."
+  - title: "Bitmap Tracing"
+    icon: "✏️"
+    details: "Convert bitmap images to clean, scalable vector graphics."
+  - title: "Posterization"
+    icon: "🎨"
+    details: "Create multi-level color traces for more detailed vector output."
+  - title: "SVG Generation"
+    icon: "🖋️"
+    details: "Generate optimized SVG output with customizable styling options."
+  - title: "TypeScript Support"
+    icon: "🛠️"
+    details: "Fully typed API for a better development experience."
 ---
 
 <Home />

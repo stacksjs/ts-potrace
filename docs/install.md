@@ -1,118 +1,81 @@
-# Install
+# Installation
 
-_This is just an example of the ts-starter docs._
+ts-potrace can be installed from npm, and works in Node.js environments.
 
-Installing `rpx` is easy. Simply pull it in via your package manager of choice, or download the binary directly.
+## Requirements
 
-## Package Managers
+- Node.js 22 or newer
+- Bun 1.2.13 or newer
 
-Choose your package manager of choice:
+## Using npm
 
-::: code-group
-
-```sh [npm]
-npm install --save-dev @stacksjs/rpx
-# npm i -d @stacksjs/rpx
-
-# or, install globally via
-npm i -g @stacksjs/rpx
+```bash
+npm install ts-potrace
 ```
 
-```sh [bun]
-bun install --dev @stacksjs/rpx
-# bun add --dev @stacksjs/rpx
-# bun i -d @stacksjs/rpx
+## Using Yarn
 
-# or, install globally via
-bun add --global @stacksjs/rpx
+```bash
+yarn add ts-potrace
 ```
 
-```sh [pnpm]
-pnpm add --save-dev @stacksjs/rpx
-# pnpm i -d @stacksjs/rpx
+## Using pnpm
 
-# or, install globally via
-pnpm add --global @stacksjs/rpx
+```bash
+pnpm add ts-potrace
 ```
 
-```sh [yarn]
-yarn add --dev @stacksjs/rpx
-# yarn i -d @stacksjs/rpx
+## Using Bun
 
-# or, install globally via
-yarn global add @stacksjs/rpx
+```bash
+bun add ts-potrace
 ```
 
-```sh [brew]
-brew install rpx # coming soon
+## Dependencies
+
+`ts-potrace` has the following key dependencies:
+
+- **Jimp**: For image loading and manipulation
+- **node:buffer**: For handling binary data
+
+These dependencies will be automatically installed when you install `ts-potrace`.
+
+## TypeScript Configuration
+
+`ts-potrace` is written in TypeScript and provides type definitions out of the box. No additional configuration is needed to use it in a TypeScript project.
+
+If you're using TypeScript, make sure your `tsconfig.json` includes the following settings for optimal compatibility:
+
+```json
+{
+  "compilerOptions": {
+    "esModuleInterop": true,
+    "moduleResolution": "node"
+  }
+}
 ```
 
-```sh [pkgx]
-pkgx rpx # coming soon
+## Verification
+
+You can verify that ts-potrace is installed correctly by running a simple test:
+
+```ts
+import { trace } from 'ts-potrace'
+
+// Log the version information
+console.log('ts-potrace is installed!')
+
+// Try a simple trace operation with a test image
+trace('test.png', (err, svg) => {
+  if (err) {
+    console.error('Error during test:', err)
+  }
+  else {
+    console.log('Successfully traced test image')
+  }
+})
 ```
 
-:::
+## Next Steps
 
-Read more about how to use it in the Usage section of the documentation.
-
-## Binaries
-
-Choose the binary that matches your platform and architecture:
-
-::: code-group
-
-```sh [macOS (arm64)]
-# Download the binary
-curl -L https://github.com/stacksjs/rpx/releases/download/v0.9.1/rpx-darwin-arm64 -o rpx
-
-# Make it executable
-chmod +x rpx
-
-# Move it to your PATH
-mv rpx /usr/local/bin/rpx
-```
-
-```sh [macOS (x64)]
-# Download the binary
-curl -L https://github.com/stacksjs/rpx/releases/download/v0.9.1/rpx-darwin-x64 -o rpx
-
-# Make it executable
-chmod +x rpx
-
-# Move it to your PATH
-mv rpx /usr/local/bin/rpx
-```
-
-```sh [Linux (arm64)]
-# Download the binary
-curl -L https://github.com/stacksjs/rpx/releases/download/v0.9.1/rpx-linux-arm64 -o rpx
-
-# Make it executable
-chmod +x rpx
-
-# Move it to your PATH
-mv rpx /usr/local/bin/rpx
-```
-
-```sh [Linux (x64)]
-# Download the binary
-curl -L https://github.com/stacksjs/rpx/releases/download/v0.9.1/rpx-linux-x64 -o rpx
-
-# Make it executable
-chmod +x rpx
-
-# Move it to your PATH
-mv rpx /usr/local/bin/rpx
-```
-
-```sh [Windows (x64)]
-# Download the binary
-curl -L https://github.com/stacksjs/rpx/releases/download/v0.9.1/rpx-windows-x64.exe -o rpx.exe
-
-# Move it to your PATH (adjust the path as needed)
-move rpx.exe C:\Windows\System32\rpx.exe
-```
-
-::: tip
-You can also find the `rpx` binaries in GitHub [releases](https://github.com/stacksjs/rpx/releases).
-:::
+Now that you have installed ts-potrace, you can proceed to the [Usage](./usage) guide to learn how to use the library.
