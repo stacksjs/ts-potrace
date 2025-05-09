@@ -180,21 +180,11 @@ Configuration object is extended with following properties:
 - With big number of layers produced image will be looking brighter overall than original due to math error at the rendering phase because of how layers are composited.
 - With default configuration `steps`, `threshold` and `rangeDistribution` settings all set to auto, resulting in a 4 thresholds/color stops being calculated with Multilevel Thresholding algorithm mentioned above. Calculation of 4 thresholds takes 3-5 seconds on average laptop. You may want to explicitly limit number of `steps` to 3 to moderately improve processing speed.
 
-## Thanks to
+## Credits
 
-- Peter Selinger for [original Potrace tool and algorithm][potrace]
-- @kilobtye for original [javascript port][potrace-by-kilobtye]
-
-## License
-
-The GNU General Public License version 2 (GPLv2). Please see [License File](LICENSE) for more information.
-
-[potrace]: http://potrace.sourceforge.net/
-[potrace-algorithm]: http://potrace.sourceforge.net/potrace.pdf
-[multilevel-thresholding]: http://www.iis.sinica.edu.tw/page/jise/2001/200109_01.pdf
-[potrace-by-kilobtye]: https://github.com/kilobtye/potrace
-[potrace-js-demo]: http://kilobtye.github.io/potrace/
-[jimp]: https://github.com/oliver-moran/jimp
+- `node-potrace` - for the inspiration of this project
+- Peter Selinger - for the [original Potrace tool and algorithm][potrace]
+- @kilobtye - for the [javascript port][potrace-by-kilobtye]
 
 ## Testing
 
@@ -244,6 +234,12 @@ Made with 💙
 [npm-version-href]: https://npmjs.com/package/ts-potrace
 [github-actions-src]: https://img.shields.io/github/actions/workflow/status/stacksjs/ts-starter/ci.yml?style=flat-square&branch=main
 [github-actions-href]: https://github.com/stacksjs/ts-starter/actions?query=workflow%3Aci
+[potrace-algorithm]: http://potrace.sourceforge.net/potrace.pdf
+[multilevel-thresholding]: http://www.iis.sinica.edu.tw/page/jise/2001/200109_01.pdf
+[potrace-by-kilobtye]: https://github.com/kilobtye/potrace
+[potrace-js-demo]: http://kilobtye.github.io/potrace/
+[potrace]: http://potrace.sourceforge.net/
+[jimp]: https://github.com/oliver-moran/jimp
 
 <!-- [codecov-src]: https://img.shields.io/codecov/c/gh/stacksjs/ts-starter/main?style=flat-square
 [codecov-href]: https://codecov.io/gh/stacksjs/ts-starter -->
