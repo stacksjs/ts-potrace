@@ -36,11 +36,31 @@ function before(fn: () => Promise<void> | void): void {
   }
 }
 
+// Create test images with Jimp.read to avoid constructor issues
 before(async () => {
-  // @ts-ignore - Jimp constructor type doesn't match the runtime behavior
-  blackImage = new Jimp(10, 10, 0x000000FF)
-  // @ts-ignore - Jimp constructor type doesn't match the runtime behavior
-  whiteImage = new Jimp(10, 10, 0xFFFFFFFF)
+  try {
+    // Create blank images programmatically instead of using the constructor
+    blackImage = await Jimp.read(PATH_TO_YAO) // Use an existing image
+    blackImage.scan(0, 0, blackImage.bitmap.width, blackImage.bitmap.height, (x, y, idx) => {
+      // Set all pixels to black
+      blackImage.bitmap.data[idx] = 0
+      blackImage.bitmap.data[idx + 1] = 0
+      blackImage.bitmap.data[idx + 2] = 0
+      blackImage.bitmap.data[idx + 3] = 255
+    })
+
+    whiteImage = await Jimp.read(PATH_TO_YAO) // Use an existing image
+    whiteImage.scan(0, 0, whiteImage.bitmap.width, whiteImage.bitmap.height, (x, y, idx) => {
+      // Set all pixels to white
+      whiteImage.bitmap.data[idx] = 255
+      whiteImage.bitmap.data[idx + 1] = 255
+      whiteImage.bitmap.data[idx + 2] = 255
+      whiteImage.bitmap.data[idx + 3] = 255
+    })
+  }
+  catch (e) {
+    console.error('Failed to create test images:', e)
+  }
 })
 
 describe('Potrace', () => {
@@ -156,19 +176,34 @@ describe('Histogram class (private, responsible for auto thresholding)', () => {
   let whiteHistogram: Histogram
 
   beforeAll(async () => {
-    // @ts-ignore - Jimp constructor type doesn't match runtime behavior
-    blackImage = new Jimp(100, 100, 0x000000FF)
-    // @ts-ignore - Jimp constructor type doesn't match runtime behavior
-    whiteImage = new Jimp(100, 100, 0xFFFFFFFF)
-
-    blackHistogram = new lib.types.Histogram(blackImage, lib.types.Histogram.MODE_LUMINANCE)
-    whiteHistogram = new lib.types.Histogram(whiteImage, lib.types.Histogram.MODE_LUMINANCE)
-
     try {
+      // Create test images for histogram testing
+      blackImage = await Jimp.read(PATH_TO_YAO) // Use an existing image
+      blackImage.scan(0, 0, blackImage.bitmap.width, blackImage.bitmap.height, (x, y, idx) => {
+        // Set all pixels to black
+        blackImage.bitmap.data[idx] = 0
+        blackImage.bitmap.data[idx + 1] = 0
+        blackImage.bitmap.data[idx + 2] = 0
+        blackImage.bitmap.data[idx + 3] = 255
+      })
+
+      whiteImage = await Jimp.read(PATH_TO_YAO) // Use an existing image
+      whiteImage.scan(0, 0, whiteImage.bitmap.width, whiteImage.bitmap.height, (x, y, idx) => {
+        // Set all pixels to white
+        whiteImage.bitmap.data[idx] = 255
+        whiteImage.bitmap.data[idx + 1] = 255
+        whiteImage.bitmap.data[idx + 2] = 255
+        whiteImage.bitmap.data[idx + 3] = 255
+      })
+
+      blackHistogram = new lib.types.Histogram(blackImage, lib.types.Histogram.MODE_LUMINANCE)
+      whiteHistogram = new lib.types.Histogram(whiteImage, lib.types.Histogram.MODE_LUMINANCE)
+
       const img = await Jimp.read(PATH_TO_LENNA)
       histogram = new lib.types.Histogram(img, lib.types.Histogram.MODE_LUMINANCE)
     }
     catch (err) {
+      console.error('Error in histogram test setup:', err)
       throw err
     }
   })
