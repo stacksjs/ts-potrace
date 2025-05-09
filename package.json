@@ -1,7 +1,7 @@
 {
   "name": "ts-potrace",
   "type": "module",
-  "version": "0.0.0",
+  "version": "0.1.0",
   "description": "TypeScript implementation of potrace - transforming bitmaps into vector graphics",
   "author": "Chris Breuer <chris@stacksjs.org>",
   "license": "MIT",
