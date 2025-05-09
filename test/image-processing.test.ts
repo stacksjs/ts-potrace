@@ -45,7 +45,6 @@ describe('Image Processing with Modern Jimp API', () => {
     let svgResult = ''
     await new Promise<void>((resolve, reject) => {
       posterize(image, {
-        colors: 3,
         steps: 3,
       }, ((err: Error | null, svg?: string) => {
         if (err)

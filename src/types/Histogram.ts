@@ -73,7 +73,7 @@ export class Histogram {
    * @param imageSource - Image to collect data from or size to create empty histogram
    * @param mode - Color channel mode (for Jimp instances)
    */
-  constructor(imageSource: number | Bitmap | Jimp, mode?: HistogramMode) {
+  constructor(imageSource: number | Bitmap | typeof Jimp.prototype, mode?: HistogramMode) {
     if (typeof imageSource === 'number') {
       this._createArray(imageSource)
     }
@@ -106,7 +106,7 @@ export class Histogram {
   /**
    * Aggregates color data from Jimp instance
    */
-  private _collectValuesJimp(source: Jimp, mode: HistogramMode): void {
+  private _collectValuesJimp(source: typeof Jimp.prototype, mode: HistogramMode): void {
     const pixelData = source.bitmap.data
     const data = this._createArray(source.bitmap.width * source.bitmap.height)
 
