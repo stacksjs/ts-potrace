@@ -1,111 +1,140 @@
-'use strict';
-
-var Point = require('./Point');
-var utils = require('../utils');
-var Histogram;
+import * as utils from '../utils'
+import { Histogram } from './Histogram'
+import { Point } from './Point'
 
 /**
  * Represents a bitmap where each pixel can be a number in range of 0..255
  * Used internally to store luminance data.
- *
- * @param {Number} w
- * @param {Number} h
- * @constructor
  */
-function Bitmap(w, h) {
-  this._histogram = null;
+export class Bitmap {
+  private _histogram: Histogram | null = null
+  width: number
+  height: number
+  size: number
+  arrayBuffer: ArrayBuffer
+  data: Uint8Array
 
-  this.width = w;
-  this.height = h;
-  this.size = w * h;
-  this.arrayBuffer = new ArrayBuffer(this.size);
-  this.data = new Uint8Array(this.arrayBuffer);
-}
+  /**
+   * @param w - Width of bitmap
+   * @param h - Height of bitmap
+   */
+  constructor(w: number, h: number) {
+    this.width = w
+    this.height = h
+    this.size = w * h
+    this.arrayBuffer = new ArrayBuffer(this.size)
+    this.data = new Uint8Array(this.arrayBuffer)
+  }
 
-module.exports = Bitmap;
-Histogram = require('./Histogram');
-
-Bitmap.prototype = {
   /**
    * Returns pixel value
    *
-   * @param {Number|Point} x - index, point or x
-   * @param {Number} [y]
+   * @param x - index, point or x
+   * @param y - y coordinate if first param is x
+   * @returns Pixel value (0-255)
    */
-  getValueAt: function(x, y) {
-    var index = (typeof x === 'number' && typeof y !== 'number') ? x : this.pointToIndex(x, y);
-    return this.data[index];
-  },
+  getValueAt(x: number | Point, y?: number): number {
+    if (x instanceof Point) {
+      y = x.y
+      x = x.x
+    }
+
+    if (y !== undefined) {
+      x = this.pointToIndex(x as number, y)
+    }
+
+    return this.data[x as number]
+  }
 
   /**
-   * Converts {@link Point} to index value
+   * Sets pixel value
    *
-   * @param {Number} index
-   * @returns {Point}
+   * @param x - index, point or x
+   * @param y - y coordinate if first param is x or value if first param is index
+   * @param value - value
+   * @returns this
    */
-  indexToPoint: function(index) {
-    var point = new Point();
-
-	  if (utils.between(index, 0, this.size)) {
-      point.y = Math.floor(index / this.width);
-      point.x = index - point.y * this.width;
-    } else {
-      point.x = -1;
-      point.y = -1;
+  setValueAt(x: number | Point, y: number, value?: number): this {
+    if (x instanceof Point) {
+      value = y
+      y = x.y
+      x = x.x
     }
 
-    return point;
-  },
+    if (value === undefined) {
+      value = y
+      this.data[x as number] = utils.clamp(value, 0, 255)
+    }
+    else {
+      this.data[this.pointToIndex(x as number, y)] = utils.clamp(value, 0, 255)
+    }
+
+    // Reset histogram on data change
+    this._histogram = null
+    return this
+  }
 
   /**
-   * Calculates index for point or coordinate pair
+   * Calculates histogram
    *
-   * @param {Number|Point} pointOrX
-   * @param {Number} [y]
-   * @returns {Number}
+   * @returns Histogram instance
    */
-  pointToIndex: function(pointOrX, y) {
-    var _x = pointOrX,
-        _y = y;
-
-    if (pointOrX instanceof Point) {
-      _x = pointOrX.x;
-      _y = pointOrX.y;
+  histogram(): Histogram {
+    if (!this._histogram) {
+      this._histogram = new Histogram(this)
     }
 
-    if (!utils.between(_x, 0, this.width) || !utils.between(_y, 0, this.height)) {
-      return -1;
+    return this._histogram
+  }
+
+  /**
+   * Translates x and y to index in data array
+   *
+   * @param x - x coordinate
+   * @param y - y coordinate
+   * @returns index in data array
+   */
+  pointToIndex(x: number, y: number): number {
+    return (y * this.width) + x
+  }
+
+  /**
+   * Converts index to Point
+   *
+   * @param index - Pixel index
+   * @returns Point object
+   */
+  indexToPoint(index: number): Point {
+    const point = new Point()
+
+    if (utils.between(index, 0, this.size)) {
+      point.y = Math.floor(index / this.width)
+      point.x = index - point.y * this.width
+    }
+    else {
+      point.x = -1
+      point.y = -1
     }
 
-    return this.width * _y + _x;
-  },
+    return point
+  }
 
   /**
    * Makes a copy of current bitmap
    *
-   * @param {Function} [iterator] optional callback, used for processing pixel value. Accepted arguments: value, index
-   * @returns {Bitmap}
+   * @param iterator - optional callback, used for processing pixel value
+   * @returns New bitmap instance
    */
-  copy: function(iterator) {
-    var bm = new Bitmap(this.width, this.height),
-        iteratorPresent = typeof iterator === 'function',
-        i;
+  copy(iterator?: (value: number, index: number) => number): Bitmap {
+    const bm = new Bitmap(this.width, this.height)
+    const iteratorPresent = typeof iterator === 'function'
 
-    for (i = 0; i < this.size; i++) {
-      bm.data[i] = iteratorPresent ? iterator(this.data[i], i) : this.data[i];
+    for (let i = 0; i < this.size; i++) {
+      bm.data[i] = iteratorPresent ? iterator(this.data[i], i) : this.data[i]
     }
 
-    return bm;
-  },
-
-  histogram: function() {
-    var Histogram = require('./Histogram');
-
-    if (this._histogram) {
-      return this._histogram;
-    }
-
-    this._histogram = new Histogram(this);
-    return this._histogram;
+    return bm
   }
-};
+}
+
+export default Bitmap

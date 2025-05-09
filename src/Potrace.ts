@@ -1,15 +1,16 @@
 'use strict'
 
-let Jimp = require('jimp')
-let Bitmap = require('./types/Bitmap')
-let Curve = require('./types/Curve')
-let Opti = require('./types/Opti')
-let Path = require('./types/Path')
-let Point = require('./types/Point')
-let Quad = require('./types/Quad')
-let Sum = require('./types/Sum')
+import type { LoadImageCallback, PotraceOptions } from './types'
+import Jimp from 'jimp'
+import { Bitmap } from './types/Bitmap'
+import { Curve } from './types/Curve'
+import { Opti } from './types/Opti'
+import { Path } from './types/Path'
+import { Point } from './types/Point'
+import { Quad } from './types/Quad'
 
-let utils = require('./utils')
+import { Sum } from './types/Sum'
+import * as utils from './utils'
 
 /**
  * Potrace class
@@ -17,53 +18,53 @@ let utils = require('./utils')
  * @param {Potrace~Options} [options]
  * @constructor
  */
-function Potrace(options) {
-  this._luminanceData = null
-  this._pathlist = []
+class Potrace {
+  // Constants
+  static COLOR_AUTO: 'auto' = 'auto'
+  static COLOR_TRANSPARENT: 'transparent' = 'transparent'
+  static THRESHOLD_AUTO: -1 = -1
+  static TURNPOLICY_BLACK: 'black' = 'black'
+  static TURNPOLICY_WHITE: 'white' = 'white'
+  static TURNPOLICY_LEFT: 'left' = 'left'
+  static TURNPOLICY_RIGHT: 'right' = 'right'
+  static TURNPOLICY_MINORITY: 'minority' = 'minority'
+  static TURNPOLICY_MAJORITY: 'majority' = 'majority'
 
-  this._imageLoadingIdentifier = null
-  this._imageLoaded = false
-  this._processed = false
+  // Instance properties
+  _luminanceData: Bitmap
+  _pathlist: Path[]
+  _imageLoadingIdentifier: string | null
+  _imageLoaded: boolean
+  _processed: boolean
+  _params: PotraceOptions
 
-  this._params = {
-    turnPolicy: Potrace.TURNPOLICY_MINORITY,
-    turdSize: 2,
-    alphaMax: 1,
-    optCurve: true,
-    optTolerance: 0.2,
-    threshold: Potrace.THRESHOLD_AUTO,
-    blackOnWhite: true,
-    color: Potrace.COLOR_AUTO,
-    background: Potrace.COLOR_TRANSPARENT,
-    width: null,
-    height: null,
+  constructor(options?: PotraceOptions) {
+    this._luminanceData = null!
+    this._pathlist = []
+
+    this._imageLoadingIdentifier = null
+    this._imageLoaded = false
+    this._processed = false
+
+    this._params = {
+      turnPolicy: Potrace.TURNPOLICY_MINORITY,
+      turdSize: 2,
+      alphaMax: 1,
+      optCurve: true,
+      optTolerance: 0.2,
+      threshold: Potrace.THRESHOLD_AUTO,
+      blackOnWhite: true,
+      color: Potrace.COLOR_AUTO,
+      background: Potrace.COLOR_TRANSPARENT,
+      width: null,
+      height: null,
+    }
+
+    if (options) {
+      this.setParameters(options)
+    }
   }
 
-  if (options) {
-    this.setParameters(options)
-  }
-}
-
-Potrace.COLOR_AUTO = 'auto'
-Potrace.COLOR_TRANSPARENT = 'transparent'
-Potrace.THRESHOLD_AUTO = -1
-Potrace.TURNPOLICY_BLACK = 'black'
-Potrace.TURNPOLICY_WHITE = 'white'
-Potrace.TURNPOLICY_LEFT = 'left'
-Potrace.TURNPOLICY_RIGHT = 'right'
-Potrace.TURNPOLICY_MINORITY = 'minority'
-Potrace.TURNPOLICY_MAJORITY = 'majority'
-
-let SUPPORTED_TURNPOLICY_VALUES = [
-  Potrace.TURNPOLICY_BLACK,
-  Potrace.TURNPOLICY_WHITE,
-  Potrace.TURNPOLICY_LEFT,
-  Potrace.TURNPOLICY_RIGHT,
-  Potrace.TURNPOLICY_MINORITY,
-  Potrace.TURNPOLICY_MAJORITY,
-]
-
-Potrace.prototype = {
   /**
    * Creating a new {@link Path} for every group of black pixels.
    * @private
@@ -95,17 +96,17 @@ Potrace.prototype = {
      * @returns {boolean}
      * @private
      */
-    function findNext(point) {
-      let i = blackMap.pointToIndex(point)
+    function findNext(point: Point): Point | null {
+      let i = blackMap.pointToIndex(point.x, point.y)
 
       while (i < blackMap.size && blackMap.data[i] !== 1) {
         i++
       }
 
-      return i < blackMap.size && blackMap.indexToPoint(i)
+      return i < blackMap.size ? blackMap.indexToPoint(i) : null
     }
 
-    function majority(x, y) {
+    function majority(x: number, y: number): number {
       let i, a, ct
 
       for (i = 2; i < 5; i++) {
@@ -127,7 +128,7 @@ Potrace.prototype = {
       return 0
     }
 
-    function findPath(point) {
+    function findPath(point: Point): Path {
       let path = new Path()
       let x = point.x
       let y = point.y
@@ -189,11 +190,11 @@ Potrace.prototype = {
       return path
     }
 
-    function xorPath(path) {
+    function xorPath(path: Path) {
       let y1 = path.pt[0].y
       let len = path.len
-      let x; let y; let maxX; let minY; let i; let j
-      let indx
+      let x, y, maxX, minY, i, j
+      let idx
 
       for (i = 1; i < len; i++) {
         x = path.pt[i].x
@@ -202,9 +203,10 @@ Potrace.prototype = {
         if (y !== y1) {
           minY = y1 < y ? y1 : y
           maxX = path.maxX
+
           for (j = x; j < maxX; j++) {
-            indx = blackMap.pointToIndex(j, minY)
-            blackMap.data[indx] = blackMap.data[indx] ? 0 : 1
+            idx = blackMap.pointToIndex(j, minY)
+            blackMap.data[idx] = blackMap.data[idx] ? 0 : 1
           }
           y1 = y
         }
@@ -214,943 +216,202 @@ Potrace.prototype = {
     // Clear path list
     this._pathlist = []
 
-    while (currentPoint = findNext(currentPoint)) {
-      path = findPath(currentPoint)
-      xorPath(path)
+    // Find first black pixel
+    currentPoint = findNext(currentPoint)
 
-      if (path.area > self._params.turdSize) {
+    while (currentPoint) {
+      path = findPath(currentPoint)
+
+      // Ignore degenerate paths
+      if (path.area > this._params.turdSize) {
         this._pathlist.push(path)
+        xorPath(path)
       }
+
+      currentPoint = findNext(currentPoint)
     }
-  },
+  }
 
   /**
-   * Processes path list created by _bmToPathlist method creating and optimizing {@link Curve}'s
+   * Processes path list by finding optimal straight/curve lines
    * @private
    */
   _processPath() {
-    let self = this
+    // Chain together path segments that share the same sign and adjacent corners
+    this._pathlist = this._connectPaths(this._pathlist)
 
-    function calcSums(path) {
-      let i, x, y
-      path.x0 = path.pt[0].x
-      path.y0 = path.pt[0].y
+    // Create curves
+    this._pathlist.forEach((path) => {
+      const curve = path.curve = new Curve(path.len)
+      this._calcSums(path)
+      this._calcLon(path)
+      this._bestPolygon(path)
+      this._adjustVertices(path)
 
-      path.sums = []
-      let s = path.sums
-      s.push(new Sum(0, 0, 0, 0, 0))
-      for (i = 0; i < path.len; i++) {
-        x = path.pt[i].x - path.x0
-        y = path.pt[i].y - path.y0
-        s.push(new Sum(s[i].x + x, s[i].y + y, s[i].xy + x * y, s[i].x2 + x * x, s[i].y2 + y * y))
-      }
-    }
-
-    function calcLon(path) {
-      let n = path.len
-      let pt = path.pt
-      let dir
-      let pivk = new Array(n)
-      let nc = new Array(n)
-      let ct = Array.from({ length: 4 })
-
-      path.lon = new Array(n)
-
-      let constraint = [new Point(), new Point()]
-      let cur = new Point()
-      let off = new Point()
-      let dk = new Point()
-      let foundk
-
-      let i; let j; let k1; let a; let b; let c; let d; let k = 0
-      for (i = n - 1; i >= 0; i--) {
-        if (pt[i].x != pt[k].x && pt[i].y != pt[k].y) {
-          k = i + 1
-        }
-        nc[i] = k
+      // Smooth the vertices
+      for (let i = 0; i < curve.n; i++) {
+        this._smooth(path, curve, i)
       }
 
-      for (i = n - 1; i >= 0; i--) {
-        ct[0] = ct[1] = ct[2] = ct[3] = 0
-        dir = (3 + 3 * (pt[utils.mod(i + 1, n)].x - pt[i].x)
-          + (pt[utils.mod(i + 1, n)].y - pt[i].y)) / 2
-        ct[dir]++
-
-        constraint[0].x = 0
-        constraint[0].y = 0
-        constraint[1].x = 0
-        constraint[1].y = 0
-
-        k = nc[i]
-        k1 = i
-        while (1) {
-          foundk = 0
-          dir = (3 + 3 * utils.sign(pt[k].x - pt[k1].x)
-            + utils.sign(pt[k].y - pt[k1].y)) / 2
-          ct[dir]++
-
-          if (ct[0] && ct[1] && ct[2] && ct[3]) {
-            pivk[i] = k1
-            foundk = 1
-            break
-          }
-
-          cur.x = pt[k].x - pt[i].x
-          cur.y = pt[k].y - pt[i].y
-
-          if (utils.xprod(constraint[0], cur) < 0 || utils.xprod(constraint[1], cur) > 0) {
-            break
-          }
-
-          if (Math.abs(cur.x) <= 1 && Math.abs(cur.y) <= 1) {
-
-          }
-          else {
-            off.x = cur.x + ((cur.y >= 0 && (cur.y > 0 || cur.x < 0)) ? 1 : -1)
-            off.y = cur.y + ((cur.x <= 0 && (cur.x < 0 || cur.y < 0)) ? 1 : -1)
-            if (utils.xprod(constraint[0], off) >= 0) {
-              constraint[0].x = off.x
-              constraint[0].y = off.y
-            }
-            off.x = cur.x + ((cur.y <= 0 && (cur.y < 0 || cur.x < 0)) ? 1 : -1)
-            off.y = cur.y + ((cur.x >= 0 && (cur.x > 0 || cur.y < 0)) ? 1 : -1)
-            if (utils.xprod(constraint[1], off) <= 0) {
-              constraint[1].x = off.x
-              constraint[1].y = off.y
-            }
-          }
-          k1 = k
-          k = nc[k1]
-          if (!utils.cyclic(k, i, k1)) {
-            break
-          }
-        }
-        if (foundk === 0) {
-          dk.x = utils.sign(pt[k].x - pt[k1].x)
-          dk.y = utils.sign(pt[k].y - pt[k1].y)
-          cur.x = pt[k1].x - pt[i].x
-          cur.y = pt[k1].y - pt[i].y
-
-          a = utils.xprod(constraint[0], cur)
-          b = utils.xprod(constraint[0], dk)
-          c = utils.xprod(constraint[1], cur)
-          d = utils.xprod(constraint[1], dk)
-
-          j = 10000000
-
-          if (b < 0) {
-            j = Math.floor(a / -b)
-          }
-          if (d > 0) {
-            j = Math.min(j, Math.floor(-c / d))
-          }
-
-          pivk[i] = utils.mod(k1 + j, n)
-        }
+      if (this._params.optCurve) {
+        // Calculate best bezier curves
+        this._optiCurve(path, curve)
       }
-
-      j = pivk[n - 1]
-      path.lon[n - 1] = j
-      for (i = n - 2; i >= 0; i--) {
-        if (utils.cyclic(i + 1, pivk[i], j)) {
-          j = pivk[i]
-        }
-        path.lon[i] = j
-      }
-
-      for (i = n - 1; utils.cyclic(utils.mod(i + 1, n), j, path.lon[i]); i--) {
-        path.lon[i] = j
-      }
-    }
-
-    function bestPolygon(path: typeof Path) {
-      function penalty3(path: typeof Path, i: number, j: number) {
-        const n = path.len
-        const pt = path.pt
-        const sums = path.sums
-        let x
-        let y
-        let xy
-        let x2
-        let y2
-        let k
-        let r = 0
-
-        if (j >= n) {
-          j -= n
-          r = 1
-        }
-
-        if (r === 0) {
-          x = sums[j + 1].x - sums[i].x
-          y = sums[j + 1].y - sums[i].y
-          x2 = sums[j + 1].x2 - sums[i].x2
-          xy = sums[j + 1].xy - sums[i].xy
-          y2 = sums[j + 1].y2 - sums[i].y2
-          k = j + 1 - i
-        }
-        else {
-          x = sums[j + 1].x - sums[i].x + sums[n].x
-          y = sums[j + 1].y - sums[i].y + sums[n].y
-          x2 = sums[j + 1].x2 - sums[i].x2 + sums[n].x2
-          xy = sums[j + 1].xy - sums[i].xy + sums[n].xy
-          y2 = sums[j + 1].y2 - sums[i].y2 + sums[n].y2
-          k = j + 1 - i + n
-        }
-
-        const px = (pt[i].x + pt[j].x) / 2.0 - pt[0].x
-        const py = (pt[i].y + pt[j].y) / 2.0 - pt[0].y
-        const ey = (pt[j].x - pt[i].x)
-        const ex = -(pt[j].y - pt[i].y)
-
-        const a = ((x2 - 2 * x * px) / k + px * px)
-        const b = ((xy - x * py - y * px) / k + px * py)
-        const c = ((y2 - 2 * y * py) / k + py * py)
-
-        const s = ex * ex * a + 2 * ex * ey * b + ey * ey * c
-
-        return Math.sqrt(s)
-      }
-
-      let i
-      let j
-      let m
-      let k
-      const n = path.len
-      const pen = Array.from({ length: n + 1 })
-      const prev = Array.from({ length: n + 1 })
-      const clip0 = Array.from({ length: n })
-      const clip1 = Array.from({ length: n + 1 })
-      const seg0 = Array.from({ length: n + 1 })
-      const seg1 = Array.from({ length: n + 1 })
-      let thispen
-      let best
-      let c
-
-      for (i = 0; i < n; i++) {
-        c = utils.mod(path.lon[utils.mod(i - 1, n)] - 1, n)
-        if (c === i) {
-          c = utils.mod(i + 1, n)
-        }
-        if (c < i) {
-          clip0[i] = n
-        }
-        else {
-          clip0[i] = c
-        }
-      }
-
-      j = 1
-      for (i = 0; i < n; i++) {
-        while (j <= clip0[i]) {
-          clip1[j] = i
-          j++
-        }
-      }
-
-      i = 0
-      for (j = 0; i < n; j++) {
-        seg0[j] = i
-        i = clip0[i]
-      }
-      seg0[j] = n
-      m = j
-
-      i = n
-      for (j = m; j > 0; j--) {
-        seg1[j] = i
-        i = clip1[i]
-      }
-      seg1[0] = 0
-
-      pen[0] = 0
-      for (j = 1; j <= m; j++) {
-        for (i = seg1[j]; i <= seg0[j]; i++) {
-          best = -1
-          for (k = seg0[j - 1]; k >= clip1[i]; k--) {
-            thispen = penalty3(path, k, i) + pen[k]
-            if (best < 0 || thispen < best) {
-              prev[i] = k
-              best = thispen
-            }
-          }
-          pen[i] = best
-        }
-      }
-      path.m = m
-      path.po = new Array(m)
-
-      for (i = n, j = m - 1; i > 0; j--) {
-        i = prev[i]
-        path.po[j] = i
-      }
-    }
-
-    function adjustVertices(path: typeof Path) {
-      function pointslope(path: typeof Path, i: number, j: number, ctr: typeof Point, dir: typeof Point) {
-        const n = path.len
-        const sums = path.sums
-        let l
-        let r = 0
-
-        while (j >= n) {
-          j -= n
-          r += 1
-        }
-
-        while (i >= n) {
-          i -= n
-          r -= 1
-        }
-
-        while (j < 0) {
-          j += n
-          r -= 1
-        }
-
-        while (i < 0) {
-          i += n
-          r += 1
-        }
-
-        const x = sums[j + 1].x - sums[i].x + r * sums[n].x
-        const y = sums[j + 1].y - sums[i].y + r * sums[n].y
-        const x2 = sums[j + 1].x2 - sums[i].x2 + r * sums[n].x2
-        const xy = sums[j + 1].xy - sums[i].xy + r * sums[n].xy
-        const y2 = sums[j + 1].y2 - sums[i].y2 + r * sums[n].y2
-        const k = j + 1 - i + r * n
-
-        ctr.x = x / k
-        ctr.y = y / k
-
-        let a = (x2 - x * x / k) / k
-        const b = (xy - x * y / k) / k
-        let c = (y2 - y * y / k) / k
-
-        const lambda2 = (a + c + Math.sqrt((a - c) * (a - c) + 4 * b * b)) / 2
-
-        a -= lambda2
-        c -= lambda2
-
-        if (Math.abs(a) >= Math.abs(c)) {
-          l = Math.sqrt(a * a + b * b)
-          if (l !== 0) {
-            dir.x = -b / l
-            dir.y = a / l
-          }
-        }
-        else {
-          l = Math.sqrt(c * c + b * b)
-          if (l !== 0) {
-            dir.x = -c / l
-            dir.y = b / l
-          }
-        }
-        if (l === 0) {
-          dir.x = dir.y = 0
-        }
-      }
-
-      const m = path.m
-      const po = path.po
-      const n = path.len
-      const pt = path.pt
-      const x0 = path.x0
-      const y0 = path.y0
-      const ctr = Array.from({ length: m })
-      const dir = Array.from({ length: m })
-      const q = Array.from({ length: m })
-      const v = Array.from({ length: 3 })
-      let d
-      let i
-      let j
-      let k
-      let l
-      const s = new Point()
-
-      path.curve = new Curve(m)
-
-      for (i = 0; i < m; i++) {
-        j = po[utils.mod(i + 1, m)]
-        j = utils.mod(j - po[i], n) + po[i]
-        ctr[i] = new Point()
-        dir[i] = new Point()
-        pointslope(path, po[i], j, ctr[i], dir[i])
-      }
-
-      for (i = 0; i < m; i++) {
-        q[i] = new Quad()
-        d = dir[i].x * dir[i].x + dir[i].y * dir[i].y
-        if (d === 0.0) {
-          for (j = 0; j < 3; j++) {
-            for (k = 0; k < 3; k++) {
-              q[i].data[j * 3 + k] = 0
-            }
-          }
-        }
-        else {
-          v[0] = dir[i].y
-          v[1] = -dir[i].x
-          v[2] = -v[1] * ctr[i].y - v[0] * ctr[i].x
-          for (l = 0; l < 3; l++) {
-            for (k = 0; k < 3; k++) {
-              q[i].data[l * 3 + k] = v[l] * v[k] / d
-            }
-          }
-        }
-      }
-
-      let Q, w, dx, dy, det, min, cand, xmin, ymin, z
-      for (i = 0; i < m; i++) {
-        Q = new Quad()
-        w = new Point()
-
-        s.x = pt[po[i]].x - x0
-        s.y = pt[po[i]].y - y0
-
-        j = utils.mod(i - 1, m)
-
-        for (l = 0; l < 3; l++) {
-          for (k = 0; k < 3; k++) {
-            Q.data[l * 3 + k] = q[j].at(l, k) + q[i].at(l, k)
-          }
-        }
-
-        while (1) {
-          det = Q.at(0, 0) * Q.at(1, 1) - Q.at(0, 1) * Q.at(1, 0)
-          if (det !== 0.0) {
-            w.x = (-Q.at(0, 2) * Q.at(1, 1) + Q.at(1, 2) * Q.at(0, 1)) / det
-            w.y = (Q.at(0, 2) * Q.at(1, 0) - Q.at(1, 2) * Q.at(0, 0)) / det
-            break
-          }
-
-          if (Q.at(0, 0) > Q.at(1, 1)) {
-            v[0] = -Q.at(0, 1)
-            v[1] = Q.at(0, 0)
-          }
-          else if (Q.at(1, 1)) {
-            v[0] = -Q.at(1, 1)
-            v[1] = Q.at(1, 0)
-          }
-          else {
-            v[0] = 1
-            v[1] = 0
-          }
-          d = v[0] * v[0] + v[1] * v[1]
-          v[2] = -v[1] * s.y - v[0] * s.x
-          for (l = 0; l < 3; l++) {
-            for (k = 0; k < 3; k++) {
-              Q.data[l * 3 + k] += v[l] * v[k] / d
-            }
-          }
-        }
-        dx = Math.abs(w.x - s.x)
-        dy = Math.abs(w.y - s.y)
-        if (dx <= 0.5 && dy <= 0.5) {
-          path.curve.vertex[i] = new Point(w.x + x0, w.y + y0)
-          continue
-        }
-
-        min = utils.quadform(Q, s)
-        xmin = s.x
-        ymin = s.y
-
-        if (Q.at(0, 0) !== 0.0) {
-          for (z = 0; z < 2; z++) {
-            w.y = s.y - 0.5 + z
-            w.x = -(Q.at(0, 1) * w.y + Q.at(0, 2)) / Q.at(0, 0)
-            dx = Math.abs(w.x - s.x)
-            cand = utils.quadform(Q, w)
-            if (dx <= 0.5 && cand < min) {
-              min = cand
-              xmin = w.x
-              ymin = w.y
-            }
-          }
-        }
-
-        if (Q.at(1, 1) !== 0.0) {
-          for (z = 0; z < 2; z++) {
-            w.x = s.x - 0.5 + z
-            w.y = -(Q.at(1, 0) * w.x + Q.at(1, 2)) / Q.at(1, 1)
-            dy = Math.abs(w.y - s.y)
-            cand = utils.quadform(Q, w)
-            if (dy <= 0.5 && cand < min) {
-              min = cand
-              xmin = w.x
-              ymin = w.y
-            }
-          }
-        }
-
-        for (l = 0; l < 2; l++) {
-          for (k = 0; k < 2; k++) {
-            w.x = s.x - 0.5 + l
-            w.y = s.y - 0.5 + k
-            cand = utils.quadform(Q, w)
-            if (cand < min) {
-              min = cand
-              xmin = w.x
-              ymin = w.y
-            }
-          }
-        }
-
-        path.curve.vertex[i] = new Point(xmin + x0, ymin + y0)
-      }
-    }
-
-    function reverse(path: typeof Path) {
-      const curve = path.curve
-      const m = curve.n
-      const v = curve.vertex
-      let i
-      let j
-      let tmp
-
-      for (i = 0, j = m - 1; i < j; i++, j--) {
-        tmp = v[i]
-        v[i] = v[j]
-        v[j] = tmp
-      }
-    }
-
-    function smooth(path: typeof Path) {
-      const curve = path.curve
-      const m = curve.n
-
-      let i
-      let j
-      let k
-      let dd
-      let denom
-      let alpha
-      let p2
-      let p3
-      let p4
-
-      for (i = 0; i < m; i++) {
-        j = utils.mod(i + 1, m)
-        k = utils.mod(i + 2, m)
-        p4 = utils.interval(1 / 2.0, curve.vertex[k], curve.vertex[j])
-
-        denom = utils.ddenom(curve.vertex[i], curve.vertex[k])
-        if (denom !== 0.0) {
-          dd = utils.dpara(curve.vertex[i], curve.vertex[j], curve.vertex[k]) / denom
-          dd = Math.abs(dd)
-          alpha = dd > 1 ? (1 - 1.0 / dd) : 0
-          alpha = alpha / 0.75
-        }
-        else {
-          alpha = 4 / 3.0
-        }
-        curve.alpha0[j] = alpha
-
-        if (alpha >= self._params.alphaMax) {
-          curve.tag[j] = 'CORNER'
-          curve.c[3 * j + 1] = curve.vertex[j]
-          curve.c[3 * j + 2] = p4
-        }
-        else {
-          if (alpha < 0.55) {
-            alpha = 0.55
-          }
-          else if (alpha > 1) {
-            alpha = 1
-          }
-          p2 = utils.interval(0.5 + 0.5 * alpha, curve.vertex[i], curve.vertex[j])
-          p3 = utils.interval(0.5 + 0.5 * alpha, curve.vertex[k], curve.vertex[j])
-          curve.tag[j] = 'CURVE'
-          curve.c[3 * j + 0] = p2
-          curve.c[3 * j + 1] = p3
-          curve.c[3 * j + 2] = p4
-        }
-        curve.alpha[j] = alpha
-        curve.beta[j] = 0.5
-      }
-      curve.alphaCurve = 1
-    }
-
-    function optiCurve(path: typeof Path) {
-      function opti_penalty(path: typeof Path, i: number, j: number, res: typeof Opti, opttolerance: number, convc: number[], areac: number[]) {
-        const m = path.curve.n
-        const curve = path.curve
-        const vertex = curve.vertex
-        let k
-        let k1
-        let k2
-        let area
-        let d
-        let d1
-        let d2
-        let p1
-        let p2
-        let pt
-        let t
-
-        if (i === j) {
-          return 1
-        }
-
-        k = i
-        const i1 = utils.mod(i + 1, m)
-        k1 = utils.mod(k + 1, m)
-        const conv = convc[k1]
-
-        if (conv === 0) {
-          return 1
-        }
-
-        d = utils.ddist(vertex[i], vertex[i1])
-
-        for (k = k1; k !== j; k = k1) {
-          k1 = utils.mod(k + 1, m)
-          k2 = utils.mod(k + 2, m)
-          if (convc[k1] !== conv) {
-            return 1
-          }
-          if (utils.sign(utils.cprod(vertex[i], vertex[i1], vertex[k1], vertex[k2]))
-            !== conv) {
-            return 1
-          }
-
-          if (utils.iprod1(vertex[i], vertex[i1], vertex[k1], vertex[k2])
-            < d * utils.ddist(vertex[k1], vertex[k2]) * -0.999847695156) {
-            return 1
-          }
-        }
-
-        const p0 = curve.c[utils.mod(i, m) * 3 + 2].copy()
-        p1 = vertex[utils.mod(i + 1, m)].copy()
-        p2 = vertex[utils.mod(j, m)].copy()
-        const p3 = curve.c[utils.mod(j, m) * 3 + 2].copy()
-
-        area = areac[j] - areac[i]
-        area -= utils.dpara(vertex[0], curve.c[i * 3 + 2], curve.c[j * 3 + 2]) / 2
-        if (i >= j) {
-          area += areac[m]
-        }
-
-        const A1 = utils.dpara(p0, p1, p2)
-        const A2 = utils.dpara(p0, p1, p3)
-        const A3 = utils.dpara(p0, p2, p3)
-        const A4 = A1 + A3 - A2
-
-        if (A2 === A1) {
-          return 1
-        }
-
-        t = A3 / (A3 - A4)
-        const s = A2 / (A2 - A1)
-        const A = A2 * t / 2.0
-
-        if (A === 0.0) {
-          return 1
-        }
-
-        const R = area / A
-        const alpha = 2 - Math.sqrt(4 - R / 0.3)
-
-        res.c[0] = utils.interval(t * alpha, p0, p1)
-        res.c[1] = utils.interval(s * alpha, p3, p2)
-        res.alpha = alpha
-        res.t = t
-        res.s = s
-
-        p1 = res.c[0].copy()
-        p2 = res.c[1].copy()
-
-        res.pen = 0
-
-        for (k = utils.mod(i + 1, m); k !== j; k = k1) {
-          k1 = utils.mod(k + 1, m)
-          t = utils.tangent(p0, p1, p2, p3, vertex[k], vertex[k1])
-          if (t < -0.5) {
-            return 1
-          }
-          pt = utils.bezier(t, p0, p1, p2, p3)
-          d = utils.ddist(vertex[k], vertex[k1])
-          if (d === 0.0) {
-            return 1
-          }
-          d1 = utils.dpara(vertex[k], vertex[k1], pt) / d
-          if (Math.abs(d1) > opttolerance) {
-            return 1
-          }
-          if (utils.iprod(vertex[k], vertex[k1], pt) < 0
-            || utils.iprod(vertex[k1], vertex[k], pt) < 0) {
-            return 1
-          }
-          res.pen += d1 * d1
-        }
-
-        for (k = i; k !== j; k = k1) {
-          k1 = utils.mod(k + 1, m)
-          t = utils.tangent(p0, p1, p2, p3, curve.c[k * 3 + 2], curve.c[k1 * 3 + 2])
-          if (t < -0.5) {
-            return 1
-          }
-          pt = utils.bezier(t, p0, p1, p2, p3)
-          d = utils.ddist(curve.c[k * 3 + 2], curve.c[k1 * 3 + 2])
-          if (d === 0.0) {
-            return 1
-          }
-          d1 = utils.dpara(curve.c[k * 3 + 2], curve.c[k1 * 3 + 2], pt) / d
-          d2 = utils.dpara(curve.c[k * 3 + 2], curve.c[k1 * 3 + 2], vertex[k1]) / d
-          d2 *= 0.75 * curve.alpha[k1]
-          if (d2 < 0) {
-            d1 = -d1
-            d2 = -d2
-          }
-          if (d1 < d2 - opttolerance) {
-            return 1
-          }
-          if (d1 < d2) {
-            res.pen += (d1 - d2) * (d1 - d2)
-          }
-        }
-
-        return 0
-      }
-
-      const curve = path.curve
-      const m = curve.n
-      const vert = curve.vertex
-      const pt = Array.from({ length: m + 1 })
-      const pen = Array.from({ length: m + 1 })
-      const len = Array.from({ length: m + 1 })
-      const opt = Array.from({ length: m + 1 })
-      let i
-      let j
-      let r
-      let o = new Opti()
-      let i1
-      let area
-      let alpha
-
-      const convc = Array.from({ length: m })
-      const areac = Array.from({ length: m + 1 })
-
-      for (i = 0; i < m; i++) {
-        if (curve.tag[i] === 'CURVE') {
-          convc[i] = utils.sign(utils.dpara(vert[utils.mod(i - 1, m)], vert[i], vert[utils.mod(i + 1, m)]))
-        }
-        else {
-          convc[i] = 0
-        }
-      }
-
-      area = 0.0
-      areac[0] = 0.0
-      const p0 = curve.vertex[0]
-      for (i = 0; i < m; i++) {
-        i1 = utils.mod(i + 1, m)
-        if (curve.tag[i1] === 'CURVE') {
-          alpha = curve.alpha[i1]
-          area += 0.3 * alpha * (4 - alpha)
-            * utils.dpara(curve.c[i * 3 + 2], vert[i1], curve.c[i1 * 3 + 2]) / 2
-          area += utils.dpara(p0, curve.c[i * 3 + 2], curve.c[i1 * 3 + 2]) / 2
-        }
-        areac[i + 1] = area
-      }
-
-      pt[0] = -1
-      pen[0] = 0
-      len[0] = 0
-
-      for (j = 1; j <= m; j++) {
-        pt[j] = j - 1
-        pen[j] = pen[j - 1]
-        len[j] = len[j - 1] + 1
-
-        for (i = j - 2; i >= 0; i--) {
-          r = opti_penalty(path, i, utils.mod(j, m), o, self._params.optTolerance, convc, areac)
-          if (r) {
-            break
-          }
-          if (len[j] > len[i] + 1
-            || (len[j] == len[i] + 1 && pen[j] > pen[i] + o.pen)) {
-            pt[j] = i
-            pen[j] = pen[i] + o.pen
-            len[j] = len[i] + 1
-            opt[j] = o
-            o = new Opti()
-          }
-        }
-      }
-      const om = len[m]
-      const ocurve = new Curve(om)
-      const s = Array.from({ length: om })
-      const t = Array.from({ length: om })
-
-      j = m
-      for (i = om - 1; i >= 0; i--) {
-        if (pt[j] === j - 1) {
-          ocurve.tag[i] = curve.tag[utils.mod(j, m)]
-          ocurve.c[i * 3 + 0] = curve.c[utils.mod(j, m) * 3 + 0]
-          ocurve.c[i * 3 + 1] = curve.c[utils.mod(j, m) * 3 + 1]
-          ocurve.c[i * 3 + 2] = curve.c[utils.mod(j, m) * 3 + 2]
-          ocurve.vertex[i] = curve.vertex[utils.mod(j, m)]
-          ocurve.alpha[i] = curve.alpha[utils.mod(j, m)]
-          ocurve.alpha0[i] = curve.alpha0[utils.mod(j, m)]
-          ocurve.beta[i] = curve.beta[utils.mod(j, m)]
-          s[i] = t[i] = 1.0
-        }
-        else {
-          ocurve.tag[i] = 'CURVE'
-          ocurve.c[i * 3 + 0] = opt[j].c[0]
-          ocurve.c[i * 3 + 1] = opt[j].c[1]
-          ocurve.c[i * 3 + 2] = curve.c[utils.mod(j, m) * 3 + 2]
-          ocurve.vertex[i] = utils.interval(opt[j].s, curve.c[utils.mod(j, m) * 3 + 2], vert[utils.mod(j, m)])
-          ocurve.alpha[i] = opt[j].alpha
-          ocurve.alpha0[i] = opt[j].alpha
-          s[i] = opt[j].s
-          t[i] = opt[j].t
-        }
-        j = pt[j]
-      }
-
-      for (i = 0; i < om; i++) {
-        i1 = utils.mod(i + 1, om)
-        ocurve.beta[i] = s[i] / (s[i] + t[i1])
-      }
-
-      ocurve.alphaCurve = 1
-      path.curve = ocurve
-    }
-
-    for (let i = 0; i < this._pathlist.length; i++) {
-      let path = this._pathlist[i]
-      calcSums(path)
-      calcLon(path)
-      bestPolygon(path)
-      adjustVertices(path)
-
-      if (path.sign === '-') {
-        reverse(path)
-      }
-
-      smooth(path)
-
-      if (self._params.optCurve) {
-        optiCurve(path)
-      }
-    }
-  },
+    })
+  }
 
   /**
-   * Validates some of parameters
-   * @param params
+   * Calculates a path's sums that are used in later processing
+   * @param path
    * @private
    */
-  _validateParameters(params) {
-    if (params && params.turnPolicy && !SUPPORTED_TURNPOLICY_VALUES.includes(params.turnPolicy)) {
-      let goodVals = `'${SUPPORTED_TURNPOLICY_VALUES.join('\', \'')}'`
+  _calcSums(path: Path) {
+    path.x0 = path.pt[0].x
+    path.y0 = path.pt[0].y
 
-      throw new Error(`Bad turnPolicy value. Allowed values are: ${goodVals}`)
+    path.sums = []
+    let s = path.sums
+    s.push(new Sum(0, 0, 0, 0, 0))
+    s.push(new Sum(0, 0, 0, 0, 0))
+    s.push(new Sum(0, 0, 0, 0, 0))
+    s.push(new Sum(0, 0, 0, 0, 0))
+
+    for (let i = 0; i < path.len; i++) {
+      let x = path.pt[i].x - path.x0
+      let y = path.pt[i].y - path.y0
+      s.push(new Sum(
+        s[i + 3].x + x,
+        s[i + 3].y + y,
+        s[i + 3].xy + x * y,
+        s[i + 3].x2 + x * x,
+        s[i + 3].y2 + y * y,
+      ))
     }
+  }
 
-    if (params && params.threshold != null && params.threshold !== Potrace.THRESHOLD_AUTO) {
-      if (typeof params.threshold !== 'number' || !utils.between(params.threshold, 0, 255)) {
-        throw new Error('Bad threshold value. Expected to be an integer in range 0..255')
+  /**
+   * Loads an image for tracing. Can be anything that Jimp can read, such as
+   * a file path, buffer, URL, etc.
+   *
+   * @param source - Image source
+   * @param callback - Function to call when image is loaded
+   */
+  loadImage(source: string | Buffer | any, callback: LoadImageCallback): void {
+    const self = this
+    const customId = Date.now().toString() + Math.random().toString(36).substring(2)
+
+    this._imageLoadingIdentifier = customId
+    this._imageLoaded = false
+    this._processed = false
+
+    const processImage = function (err: Error | null, image: any) {
+      // If another image was requested in the meantime or there was an error, abort
+      if (self._imageLoadingIdentifier !== customId || err) {
+        return callback && callback.call(self, err || new Error('Another image is loading'))
+      }
+
+      try {
+        // Normalize the image size if needed
+        if (self._params.width && self._params.height) {
+          image.resize(self._params.width, self._params.height)
+        }
+        else if (self._params.width) {
+          image.resize(self._params.width, Jimp.AUTO)
+        }
+        else if (self._params.height) {
+          image.resize(Jimp.AUTO, self._params.height)
+        }
+
+        // Create bitmap
+        const bitmap = new Bitmap(image.bitmap.width, image.bitmap.height)
+
+        // Collect luminance data from the image
+        image.scan(0, 0, image.bitmap.width, image.bitmap.height, (x: number, y: number, idx: number) => {
+          const red = image.bitmap.data[idx]
+          const green = image.bitmap.data[idx + 1]
+          const blue = image.bitmap.data[idx + 2]
+
+          bitmap.setValueAt(x, y, utils.luminance(red, green, blue))
+        })
+
+        self._luminanceData = bitmap
+        self._imageLoaded = true
+        self._imageLoadingIdentifier = null
+
+        callback && callback.call(self, null)
+      }
+      catch (processErr) {
+        callback && callback.call(self, processErr)
       }
     }
 
-    if (params && params.optCurve != null && typeof params.optCurve !== 'boolean') {
-      throw new Error('\'optCurve\' must be Boolean')
-    }
-  },
-
-  _processLoadedImage(image) {
-    let bitmap = new Bitmap(image.bitmap.width, image.bitmap.height)
-    let pixels = image.bitmap.data
-
-    image.scan(0, 0, image.bitmap.width, image.bitmap.height, (x, y, idx) => {
-      // We want background underneath non-opaque regions to be white
-
-      let opacity = pixels[idx + 3] / 255
-      let r = 255 + (pixels[idx + 0] - 255) * opacity
-      let g = 255 + (pixels[idx + 1] - 255) * opacity
-      let b = 255 + (pixels[idx + 2] - 255) * opacity
-
-      bitmap.data[idx / 4] = utils.luminance(r, g, b)
-    })
-
-    this._luminanceData = bitmap
-    this._imageLoaded = true
-  },
-
-  /**
-   * Reads given image. Uses {@link Jimp} under the hood, so target can be whatever Jimp can take
-   *
-   * @param {string|Buffer|Jimp} target Image source. Could be anything that {@link Jimp} can read (buffer, local path or url). Supported formats are: PNG, JPEG or BMP
-   * @param {Function} callback
-   */
-  loadImage(target, callback) {
-    let self = this
-    let jobId = {}
-
-    this._imageLoadingIdentifier = jobId
-    this._imageLoaded = false
-
-    if (target instanceof Jimp) {
-      this._imageLoadingIdentifier = null
+    if (source instanceof Bitmap) {
+      this._luminanceData = source
       this._imageLoaded = true
-      self._processLoadedImage(target)
-      callback.call(self, null)
-    }
-    else {
-      Jimp.read(target, (err, img) => {
-        let sourceChanged = self._imageLoadingIdentifier !== jobId
+      this._imageLoadingIdentifier = null
 
-        if (err || sourceChanged) {
-          let error = err || new Error('Another image was loaded instead')
-          return callback.call(self, error)
-        }
-
-        self._imageLoadingIdentifier = null
-        self._processLoadedImage(img)
-        callback.call(self, null)
-      })
+      callback && callback.call(this, null)
+      return
     }
-  },
+
+    if (source && typeof source === 'object' && source.bitmap) {
+      processImage(null, source)
+      return
+    }
+
+    Jimp.read(source, processImage)
+  }
 
   /**
    * Sets algorithm parameters
-   * @param {Potrace~Options} newParams
+   *
+   * @param params - Parameters object
    */
-  setParameters(newParams) {
-    let key, tmpOldVal
+  setParameters(params: PotraceOptions): void {
+    const newParams = { ...this._params, ...params }
 
-    this._validateParameters(newParams)
-
-    for (key in this._params) {
-      if (this._params.hasOwnProperty(key) && newParams.hasOwnProperty(key)) {
-        tmpOldVal = this._params[key]
-        this._params[key] = newParams[key]
-
-        if (tmpOldVal !== this._params[key] && !['color', 'background'].includes(key)) {
-          this._processed = false
-        }
-      }
+    // Validate turnPolicy
+    if (newParams.turnPolicy
+      && !SUPPORTED_TURNPOLICY_VALUES.includes(newParams.turnPolicy)) {
+      throw new Error(`Invalid turnPolicy: ${newParams.turnPolicy}`)
     }
-  },
+
+    // Validate turdSize
+    if (typeof newParams.turdSize === 'number'
+      && newParams.turdSize < 0) {
+      throw new Error(`Invalid turdSize: ${newParams.turdSize}`)
+    }
+
+    // Validate alphaMax
+    if (typeof newParams.alphaMax === 'number'
+      && (newParams.alphaMax < 0 || newParams.alphaMax > 1.3334)) {
+      throw new Error(`Invalid alphaMax: ${newParams.alphaMax}`)
+    }
+
+    // Validate threshold
+    if (newParams.threshold !== Potrace.THRESHOLD_AUTO
+      && typeof newParams.threshold === 'number'
+      && (newParams.threshold < 0 || newParams.threshold > 255)) {
+      throw new Error(`Invalid threshold: ${newParams.threshold}`)
+    }
+
+    // If threshold was changed, reset processed flag
+    if (newParams.threshold !== this._params.threshold
+      || newParams.blackOnWhite !== this._params.blackOnWhite) {
+      this._processed = false
+    }
+
+    this._params = newParams
+  }
 
   /**
-   * Generates just <path> tag without rest of the SVG file
+   * Generates and returns an SVG string from the traced image
    *
-   * @param {string} [fillColor] - overrides color from parameters
-   * @returns {string}
+   * @returns SVG string
    */
-  getPathTag(fillColor, scale) {
-    fillColor = arguments.length === 0 ? this._params.color : fillColor
-
-    if (fillColor === Potrace.COLOR_AUTO) {
-      fillColor = this._params.blackOnWhite ? 'black' : 'white'
-    }
-
+  getSVG(): string {
     if (!this._imageLoaded) {
-      throw new Error('Image should be loaded first')
+      throw new Error('Image not loaded')
     }
 
     if (!this._processed) {
@@ -1159,72 +420,138 @@ Potrace.prototype = {
       this._processed = true
     }
 
-    let tag = '<path d="'
+    const width = this._luminanceData.width
+    const height = this._luminanceData.height
+    const scale = { x: 1, y: 1 }
+    let fillColor = this._params.color
 
-    tag += this._pathlist.map((path) => {
-      return utils.renderCurve(path.curve, scale)
-    }).join(' ')
-
-    tag += `" stroke="none" fill="${fillColor}" fill-rule="evenodd"/>`
-
-    return tag
-  },
-
-  /**
-   * Returns <symbol> tag. Always has viewBox specified and comes with no fill color,
-   * so it could be changed with <use> tag
-   *
-   * @param id
-   * @returns {string}
-   */
-  getSymbol(id) {
-    return `<symbol `
-      + `viewBox="0 0 ${this._luminanceData.width} ${this._luminanceData.height}" `
-      + `id="${id}">${
-        this.getPathTag('')
-      }</symbol>`
-  },
-
-  /**
-   * Generates SVG image
-   * @returns {string}
-   */
-  getSVG() {
-    let width = this._params.width || this._luminanceData.width
-    let height = this._params.height || this._luminanceData.height
-    let scale = {
-      x: this._params.width ? this._params.width / this._luminanceData.width : 1,
-      y: this._params.height ? this._params.height / this._luminanceData.height : 1,
+    // Set default color if needed
+    if (fillColor === Potrace.COLOR_AUTO) {
+      fillColor = this._params.blackOnWhite ? 'black' : 'white'
     }
 
-    return `<svg xmlns="http://www.w3.org/2000/svg" `
-      + `width="${width}" `
-      + `height="${height}" `
-      + `viewBox="0 0 ${width} ${height}" `
-      + `version="1.1">\n${
-        this._params.background !== Potrace.COLOR_TRANSPARENT
-          ? `\t<rect x="0" y="0" width="100%" height="100%" fill="${this._params.background}" />\n`
-          : ''
-      }\t${this.getPathTag(this._params.color, scale)}\n`
-      + `</svg>`
-  },
+    // Start SVG
+    let svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}" viewBox="0 0 ${width} ${height}" version="1.1">\n`
+
+    // Add background if not transparent
+    if (this._params.background !== Potrace.COLOR_TRANSPARENT) {
+      svg += `\t<rect x="0" y="0" width="100%" height="100%" fill="${this._params.background}" />\n`
+    }
+
+    // Add paths
+    if (this._pathlist.length) {
+      svg += `\t${this.getPathTag(fillColor)}\n`
+    }
+
+    svg += '</svg>'
+    return svg
+  }
+
+  /**
+   * Returns a path tag for use in SVG output
+   *
+   * @param fillColor - Color to use for fill (default: auto-detect)
+   * @returns SVG path tag
+   */
+  getPathTag(fillColor?: string): string {
+    if (!this._imageLoaded) {
+      throw new Error('Image not loaded')
+    }
+
+    if (!this._processed) {
+      this._bmToPathlist()
+      this._processPath()
+      this._processed = true
+    }
+
+    if (!this._pathlist.length) {
+      return ''
+    }
+
+    if (fillColor === undefined) {
+      fillColor = this._params.color === Potrace.COLOR_AUTO
+        ? (this._params.blackOnWhite ? 'black' : 'white')
+        : this._params.color
+    }
+
+    const tag = `<path d="${this._pathlistToSVG()}" fill="${fillColor}" stroke="none" />`
+    return tag
+  }
+
+  /**
+   * Returns a symbol tag with a specified ID
+   *
+   * @param id - Symbol ID to use
+   * @returns SVG symbol tag
+   */
+  getSymbol(id: string): string {
+    if (!this._imageLoaded) {
+      throw new Error('Image not loaded')
+    }
+
+    if (!this._processed) {
+      this._bmToPathlist()
+      this._processPath()
+      this._processed = true
+    }
+
+    const width = this._luminanceData.width
+    const height = this._luminanceData.height
+
+    if (!this._pathlist.length) {
+      return `<symbol id="${id}" viewBox="0 0 ${width} ${height}"></symbol>`
+    }
+
+    return `<symbol id="${id}" viewBox="0 0 ${width} ${height}"><path d="${this._pathlistToSVG()}" /></symbol>`
+  }
+
+  /**
+   * Converts the internal path list to SVG path data
+   *
+   * @private
+   * @returns SVG path data
+   */
+  _pathlistToSVG(): string {
+    const scale = { x: 1, y: 1 }
+    const parts = []
+
+    for (const path of this._pathlist) {
+      if (path.curve) {
+        parts.push(utils.renderCurve(path.curve, scale))
+      }
+    }
+
+    return parts.join(' ')
+  }
 }
 
-module.exports = Potrace
+// Support constants
+const SUPPORTED_TURNPOLICY_VALUES = [
+  Potrace.TURNPOLICY_BLACK,
+  Potrace.TURNPOLICY_WHITE,
+  Potrace.TURNPOLICY_LEFT,
+  Potrace.TURNPOLICY_RIGHT,
+  Potrace.TURNPOLICY_MINORITY,
+  Potrace.TURNPOLICY_MAJORITY,
+]
+
+export default Potrace
 
 /**
- * Potrace options
+ * Potrace Options
  *
  * @typedef {object} Potrace~Options
- * @property {*}       [turnPolicy]   - how to resolve ambiguities in path decomposition (default Potrace.TURNPOLICY_MINORITY)
- * @property {number}  [turdSize]     - suppress speckles of up to this size (default 2)
- * @property {number}  [alphaMax]     - corner threshold parameter (default 1)
- * @property {boolean} [optCurve]     - curve optimization (default true)
- * @property {number}  [optTolerance] - curve optimization tolerance (default 0.2)
- * @property {number}  [threshold]    - threshold below which color is considered black (0..255, default Potrace.THRESHOLD_AUTO)
- * @property {boolean} [blackOnWhite] - specifies colors by which side from threshold should be traced (default true)
- * @property {string}  [color]        - foreground color (default: 'auto' (black or white)) Will be ignored when exporting as <symbol>
- * @property {string}  [background]   - background color (default: 'transparent') Will be ignored when exporting as <symbol>
+ * @property {string} [turnPolicy=TURNPOLICY_MINORITY] - determines how to resolve ambiguities in path decomposition.
+ * @property {number} [turdSize=2] - suppress speckles of up to this size (default 2)
+ * @property {number} [alphaMax=1] - corner threshold parameter (default 1)
+ * @property {boolean} [optCurve=true] - curve optimization (default true)
+ * @property {number} [optTolerance=0.2] - curve optimization tolerance (default 0.2)
+ * @property {number} [threshold=THRESHOLD_AUTO] - threshold below which colors are converted to black (default THRESHOLD_AUTO)
+ * @property {boolean} [blackOnWhite=true] - specifies colors by which side the background is (default true)
+ * @property {string} [color=COLOR_AUTO] - foreground color (default COLOR_AUTO - meaning pick black or white, depending on blackOnWhite)
+ * @property {string} [background=COLOR_TRANSPARENT] - background color (default COLOR_TRANSPARENT)
+ * @property {?number} [width=null] - desired width of SVG image, pixels (default null, meaning same format as the original image)
+ * @property {?number} [height=null] - desired height of SVG image, pixels (default null, meaning same format as the original image)
  */
 
 /**

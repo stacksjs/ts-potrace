@@ -1,11 +1,21 @@
-'use strict';
+/**
+ * Quad class for quadratic elements storage
+ */
+export class Quad {
+  data: number[]
 
-function Quad() {
-  this.data = [0,0,0,0,0,0,0,0,0];
+  constructor() {
+    this.data = [0, 0, 0, 0, 0, 0, 0, 0, 0]
+  }
+
+  /**
+   * Access matrix element at specific position
+   * @param i - Row index
+   * @param j - Column index
+   */
+  at(i: number, j: number): number {
+    return this.data[i * 3 + j]
+  }
 }
 
-Quad.prototype.at = function(x, y) {
-  return this.data[x * 3 + y];
-};
-
-module.exports = Quad;
+export default Quad

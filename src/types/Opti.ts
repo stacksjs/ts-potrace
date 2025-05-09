@@ -1,13 +1,14 @@
-'use strict';
+import { Point } from './Point'
 
-var Point = require('./Point');
-
-function Opti() {
-  this.pen = 0;
-  this.c = [new Point(), new Point()];
-  this.t = 0;
-  this.s = 0;
-  this.alpha = 0;
+/**
+ * Optimization helper class
+ */
+export class Opti {
+  pen: number = 0
+  c: Point[] = [new Point(), new Point()]
+  t: number = 0
+  s: number = 0
+  alpha: number = 0
 }
 
-module.exports = Opti;
+export default Opti

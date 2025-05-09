@@ -1,70 +1,74 @@
+import Posterizer from './Posterizer'
+import Potrace from './Potrace'
+import * as types from './types'
+
 export * from './config'
 export * from './types'
 
-let Posterizer = require('./Posterizer')
-let Potrace = require('./Potrace')
-
 /**
  * Wrapper for Potrace that simplifies use down to one function call
  *
- * @param {string|Buffer|Jimp} file Source image, file path or {@link Jimp} instance
- * @param {Potrace~Options} [options]
- * @param {traceCallback} cb Callback function. Accepts 3 arguments: error, svg content and instance of {@link Potrace} (so it could be reused with different set of parameters)
+ * @param file - Source image, file path or Jimp instance
+ * @param options - Potrace options
+ * @param cb - Callback function
  */
-function trace(file, options, cb) {
+function trace(file: string | Buffer | any, options?: any, cb?: traceCallback): void {
   if (arguments.length === 2) {
     cb = options
     options = {}
   }
 
-  let potrace = new Potrace(options)
+  const potrace = new Potrace(options)
 
-  potrace.loadImage(file, (err) => {
-    if (err) { return cb(err) }
-    cb(null, potrace.getSVG(), potrace)
+  potrace.loadImage(file, (err: Error | null) => {
+    if (err) { return cb?.(err) }
+    cb?.(null, potrace.getSVG(), potrace)
   })
 }
 
 /**
  * Wrapper for Potrace that simplifies use down to one function call
  *
- * @param {string|Buffer|Jimp} file Source image, file path or {@link Jimp} instance
- * @param {Posterizer~Options} [options]
- * @param {posterizeCallback} cb Callback function. Accepts 3 arguments: error, svg content and instance of {@link Potrace} (so it could be reused with different set of parameters)
+ * @param file - Source image, file path or Jimp instance
+ * @param options - Posterizer options
+ * @param cb - Callback function
  */
-function posterize(file, options, cb) {
+function posterize(file: string | Buffer | any, options?: any, cb?: posterizeCallback): void {
   if (arguments.length === 2) {
     cb = options
     options = {}
   }
 
-  let posterizer = new Posterizer(options)
+  const posterizer = new Posterizer(options)
 
-  posterizer.loadImage(file, (err) => {
-    if (err) { return cb(err) }
-    cb(null, posterizer.getSVG(), posterizer)
+  posterizer.loadImage(file, (err: Error | null) => {
+    if (err) { return cb?.(err) }
+    cb?.(null, posterizer.getSVG(), posterizer)
   })
-}
-
-module.exports = {
-  trace,
-  posterize,
-  Potrace,
-  Posterizer,
 }
 
 /**
  * Callback for trace method
  * @callback traceCallback
- * @param {Error|null} err
- * @param {string} svg SVG document contents
- * @param {Potrace} [instance] Potrace class instance
+ * @param err - Error or null
+ * @param svg - SVG document contents
+ * @param instance - Potrace class instance
  */
+export type traceCallback = (err: Error | null, svg?: string, instance?: Potrace) => void
 
 /**
  * Callback for posterize method
  * @callback posterizeCallback
- * @param {Error|null} err
- * @param {string} svg SVG document contents
- * @param {Posterizer} [instance] Posterizer class instance
+ * @param err - Error or null
+ * @param svg - SVG document contents
+ * @param instance - Posterizer class instance
  */
+export type posterizeCallback = (err: Error | null, svg?: string, instance?: Posterizer) => void
+
+export {
+  posterize,
+  Posterizer,
+  Potrace,
+  trace,
+  types,
+}

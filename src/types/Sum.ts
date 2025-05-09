@@ -1,11 +1,20 @@
-'use strict';
+/**
+ * Sum class for storing accumulated values
+ */
+export class Sum {
+  x: number
+  y: number
+  xy: number
+  x2: number
+  y2: number
 
-function Sum(x, y, xy, x2, y2) {
-  this.x = x;
-  this.y = y;
-  this.xy = xy;
-  this.x2 = x2;
-  this.y2 = y2;
+  constructor(x: number = 0, y: number = 0, xy: number = 0, x2: number = 0, y2: number = 0) {
+    this.x = x
+    this.y = y
+    this.xy = xy
+    this.x2 = x2
+    this.y2 = y2
+  }
 }
 
-module.exports = Sum;
+export default Sum

@@ -74,5 +74,8 @@
   },
   "lint-staged": {
     "*.{js,ts}": "bunx --bun eslint . --fix"
+  },
+  "dependencies": {
+    "jimp": "^1.6.0"
   }
 }

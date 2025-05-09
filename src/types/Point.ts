@@ -1,14 +1,18 @@
-'use strict';
+/**
+ * Point class - represents a 2D point with x,y coordinates
+ */
+export class Point {
+  x: number
+  y: number
 
-function Point(x, y) {
-  this.x = x || 0;
-  this.y = y || 0;
+  constructor(x?: number, y?: number) {
+    this.x = x || 0
+    this.y = y || 0
+  }
+
+  copy(): Point {
+    return new Point(this.x, this.y)
+  }
 }
 
-Point.prototype = {
-  copy: function() {
-    return new Point(this.x, this.y);
-  }
-};
-
-module.exports = Point;
+export default Point
