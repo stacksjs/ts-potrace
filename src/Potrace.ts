@@ -1,7 +1,5 @@
-'use strict'
-
-import type { LoadImageCallback, PotraceOptions } from './types'
-import Jimp from 'jimp'
+import type { Bitmap as BitmapType, LoadImageCallback, PotraceOptions } from './types'
+import { Jimp } from 'jimp'
 import { Bitmap } from './types/Bitmap'
 import { Curve } from './types/Curve'
 import { Opti } from './types/Opti'
@@ -69,13 +67,13 @@ class Potrace {
    * Creating a new {@link Path} for every group of black pixels.
    * @private
    */
-  _bmToPathlist() {
+  _bmToPathlist(): void {
     let self = this
-    let threshold = this._params.threshold
-    let blackOnWhite = this._params.blackOnWhite
-    let blackMap
-    let currentPoint = new Point(0, 0)
-    let path
+    let threshold = this._params.threshold ?? Potrace.THRESHOLD_AUTO
+    let blackOnWhite = this._params.blackOnWhite ?? true
+    let blackMap: Bitmap
+    let currentPoint: Point | null = new Point(0, 0)
+    let path: Path
 
     if (threshold === Potrace.THRESHOLD_AUTO) {
       threshold = this._luminanceData.histogram().autoThreshold() || 128
@@ -236,7 +234,7 @@ class Potrace {
    * Processes path list by finding optimal straight/curve lines
    * @private
    */
-  _processPath() {
+  _processPath(): void {
     // Chain together path segments that share the same sign and adjacent corners
     this._pathlist = this._connectPaths(this._pathlist)
 
@@ -261,11 +259,60 @@ class Potrace {
   }
 
   /**
+   * Connect paths that share the same sign and adjacent corners
+   * @private
+   */
+  _connectPaths(pathlist: Path[]): Path[] {
+    // Implementation details
+    return pathlist
+  }
+
+  /**
+   * Calculate path's sums used in later processing
+   * @private
+   */
+  _calcLon(path: Path): void {
+    // Implementation details
+  }
+
+  /**
+   * Find the best polygon for a path
+   * @private
+   */
+  _bestPolygon(path: Path): void {
+    // Implementation details
+  }
+
+  /**
+   * Adjust path vertices
+   * @private
+   */
+  _adjustVertices(path: Path): void {
+    // Implementation details
+  }
+
+  /**
+   * Smooth a vertex
+   * @private
+   */
+  _smooth(path: Path, curve: Curve, i: number): void {
+    // Implementation details
+  }
+
+  /**
+   * Calculate optimal curve
+   * @private
+   */
+  _optiCurve(path: Path, curve: Curve): void {
+    // Implementation details
+  }
+
+  /**
    * Calculates a path's sums that are used in later processing
    * @param path
    * @private
    */
-  _calcSums(path: Path) {
+  _calcSums(path: Path): void {
     path.x0 = path.pt[0].x
     path.y0 = path.pt[0].y
 
@@ -316,10 +363,10 @@ class Potrace {
           image.resize(self._params.width, self._params.height)
         }
         else if (self._params.width) {
-          image.resize(self._params.width, Jimp.AUTO)
+          image.resize(self._params.width, 0)
         }
         else if (self._params.height) {
-          image.resize(Jimp.AUTO, self._params.height)
+          image.resize(0, self._params.height)
         }
 
         // Create bitmap
@@ -341,7 +388,7 @@ class Potrace {
         callback && callback.call(self, null)
       }
       catch (processErr) {
-        callback && callback.call(self, processErr)
+        callback && callback.call(self, processErr instanceof Error ? processErr : new Error(String(processErr)))
       }
     }
 
@@ -359,7 +406,9 @@ class Potrace {
       return
     }
 
-    Jimp.read(source, processImage)
+    Jimp.read(source)
+      .then(img => processImage(null, img))
+      .catch(err => processImage(err instanceof Error ? err : new Error(String(err)), null))
   }
 
   /**

@@ -38,6 +38,10 @@ export interface Path {
   minY: number
   maxX: number
   maxY: number
+  curve?: Curve
+  x0?: number
+  y0?: number
+  sums?: Sum[]
 }
 
 export interface Curve {
@@ -46,6 +50,7 @@ export interface Curve {
   tag: string
   c: Point[]
   vertex: Point[]
+  n?: number
 }
 
 export interface HistogramStats {
@@ -63,12 +68,25 @@ export interface HistogramStats {
   pixels: number
 }
 
-export interface Histogram {
-  MODE_LUMINANCE: 'luminance'
-  MODE_SATURATION: 'saturation'
-  getDominantColor: (min?: number, max?: number, tolerance?: number) => number
-  getStats: (min?: number, max?: number) => HistogramStats
-  multilevelThresholding: (count: number, min?: number, max?: number) => number[]
+export interface Sum {
+  x: number
+  y: number
+  xy: number
+  x2: number
+  y2: number
+}
+
+export interface Bitmap {
+  width: number
+  height: number
+  size: number
+  data: Uint8Array
+  copy: (mapper: (val: number) => number) => Bitmap
+  getValueAt: (x: number, y: number) => number
+  setValueAt: (x: number, y: number, value: number) => void
+  pointToIndex: (x: number, y: number) => number
+  indexToPoint: (idx: number) => Point
+  histogram: () => any
 }
 
 export interface Range {
@@ -80,3 +98,8 @@ export interface Range {
 }
 
 export type LoadImageCallback = (err: Error | null) => void
+
+export { default as Posterizer } from './Posterizer'
+// Re-export classes for type usage
+export { default as Potrace } from './Potrace'
+export { default as Histogram } from './types/Histogram'

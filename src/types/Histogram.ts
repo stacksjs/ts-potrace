@@ -1,7 +1,7 @@
 // Histogram
 
 import type { HistogramStats } from '../types'
-import Jimp from 'jimp'
+import { Jimp } from 'jimp'
 import * as utils from '../utils'
 import { Bitmap } from './Bitmap'
 
