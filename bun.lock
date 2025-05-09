@@ -2,7 +2,7 @@
   "lockfileVersion": 1,
   "workspaces": {
     "": {
-      "name": "bun-ts-starter",
+      "name": "ts-potrace",
       "dependencies": {
         "jimp": "^1.6.0",
       },
