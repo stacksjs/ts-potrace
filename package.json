@@ -53,8 +53,8 @@
     "@stacksjs/logsmith": "^0.1.8",
     "@types/bun": "^1.2.12",
     "@types/jimp": "^0.2.28",
-    "buddy-bot": "^0.9.8",
-    "bun-git-hooks": "^0.2.19",
+    "buddy-bot": "0.9.8",
+    "bun-git-hooks": "^0.3.1",
     "bun-plugin-dtsx": "^0.21.12",
     "bunfig": "^0.8.5",
     "typescript": "^5.8.3"
